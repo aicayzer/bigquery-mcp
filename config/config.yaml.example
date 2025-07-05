@@ -1,0 +1,94 @@
+# BigQuery MCP Server Configuration
+
+server:
+  name: "BigQuery Development Server"
+  version: "0.1.0"
+
+# BigQuery configuration  
+bigquery:
+  # Default project for billing and unqualified table references
+  billing_project: "your-billing-project"
+  
+  # Optional: Path to service account JSON key file
+  # If not provided, uses Application Default Credentials
+  service_account_path: ""
+
+# Project access control
+# List all projects that this MCP server can access
+projects:
+  - project_id: "analytics-prod"
+    project_name: "Analytics Production" 
+    description: "Main analytics data warehouse"
+    # Dataset patterns - use wildcards to match multiple datasets
+    datasets: ["prod_*", "reporting_*"]
+    
+  - project_id: "raw-data-lake"
+    project_name: "Raw Data Lake"
+    description: "Raw data ingestion layer"
+    # Allow all datasets in this project
+    datasets: ["*"]
+    
+  - project_id: "ml-features"
+    project_name: "ML Feature Store"
+    description: "Machine learning features and training data"
+    datasets: ["features_*", "training_*", "models_*"]
+
+# Query execution limits
+limits:
+  # Default number of rows to return if not specified
+  default_row_limit: 20
+  
+  # Maximum query execution time in seconds
+  max_query_timeout: 60
+  
+  # Maximum rows that can be requested
+  max_row_limit: 10000
+  
+  # Maximum bytes that will be processed (for cost control)
+  max_bytes_processed: 1073741824  # 1GB
+
+# Response formatting options
+formatting:
+  # Use compact format by default (can be overridden by env var)
+  compact_format: false
+  
+  # Include field descriptions in schema responses
+  include_schema_descriptions: true
+  
+  # Abbreviate common BigQuery terms in responses
+  abbreviate_common_terms: false
+
+# Security settings
+security:
+  # SQL keywords that are not allowed in queries
+  banned_sql_keywords: 
+    - "CREATE"
+    - "DELETE" 
+    - "DROP"
+    - "TRUNCATE"
+    - "INSERT"
+    - "UPDATE"
+    - "ALTER"
+    - "GRANT"
+    - "REVOKE"
+    - "MERGE"
+    - "CALL"
+    - "EXECUTE"
+    - "SCRIPT"
+  
+  # Require explicit LIMIT clause in SELECT queries
+  require_explicit_limits: false
+  
+  # Allow only SELECT statements
+  select_only: true
+
+# Logging configuration
+logging:
+  # Log queries for audit purposes
+  log_queries: true
+  
+  # Log query results (be careful with sensitive data)
+  log_results: false
+  
+  # Maximum length of logged SQL queries
+  max_query_log_length: 1000
