@@ -154,10 +154,9 @@ def main():
         initialize_server()
         
         # Import tools to register them
-        # This will be done when tools are implemented
-        # import tools.discovery
-        # import tools.analysis
-        # import tools.execution
+        import tools.discovery  # Registers discovery tools
+        # import tools.analysis  # TODO: Implement analysis tools
+        # import tools.execution  # TODO: Implement execution tools
         
         # Run the MCP server
         logger.info("Starting BigQuery MCP server...")

@@ -4,6 +4,7 @@ google-cloud-bigquery>=3.11.0
 google-auth>=2.17.0
 pyyaml>=6.0
 python-dotenv>=1.0.0
+sqlparse>=0.4.4
 
 # Development dependencies
 pytest>=7.4.0

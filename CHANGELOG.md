@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-01-06
+
+### Added
+- Discovery tools implementation:
+  - `list_projects()` - List accessible BigQuery projects with metadata
+  - `list_datasets()` - List datasets with pattern filtering support
+  - `list_tables()` - List tables with type filtering (TABLE, VIEW, MATERIALIZED_VIEW)
+- Response formatting modes (standard and compact) for all tools
+- Comprehensive unit tests for discovery tools
+- Integration tests with mocked BigQuery client
+- Tool registration in FastMCP server
+- sqlparse dependency for SQL validation
+
+### Changed
+- Updated server.py to import and register discovery tools
+- Enhanced error messages with actionable suggestions
+
+## [0.1.0] - 2025-01-06
+
 ### Added
 - Initial project structure
 - Basic documentation (README, CLAUDE guidelines)
