@@ -1,10 +1,6 @@
 """MCP tools for BigQuery operations."""
 
-# Import tools to make them available when the package is imported
-from .discovery import list_projects, list_datasets, list_tables
+# Note: Tool functions are registered dynamically by the server
+# They cannot be imported directly as they require server initialization
 
-__all__ = [
-    'list_projects',
-    'list_datasets', 
-    'list_tables',
-]
+__all__ = []

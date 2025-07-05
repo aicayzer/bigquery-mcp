@@ -3,14 +3,27 @@
 import logging
 from typing import Dict, Any, List, Optional
 
-from server import mcp, handle_error, bq_client, config, formatter
 from utils.errors import ProjectAccessError, DatasetAccessError
 
 logger = logging.getLogger(__name__)
 
+# Global references that will be set by server.py
+mcp = None
+handle_error = None
+bq_client = None
+config = None
+formatter = None
 
-@mcp.tool()
-@handle_error
+
+def _ensure_initialized():
+    """Ensure that global dependencies are initialized."""
+    if any(x is None for x in [mcp, bq_client, config, formatter]):
+        raise RuntimeError(
+            "Discovery tools not properly initialized. "
+            "These tools must be used through the MCP server."
+        )
+
+
 def list_projects() -> Dict[str, Any]:
     """List accessible BigQuery projects with descriptions.
     
@@ -20,6 +33,7 @@ def list_projects() -> Dict[str, Any]:
     Returns:
         Dictionary containing project list and metadata
     """
+    _ensure_initialized()
     logger.info("Listing accessible projects")
     
     projects = []
@@ -46,8 +60,6 @@ def list_projects() -> Dict[str, Any]:
     }
 
 
-@mcp.tool()
-@handle_error
 def list_datasets(project: Optional[str] = None) -> Dict[str, Any]:
     """List datasets in a project, filtered by allowlist patterns.
     
@@ -61,6 +73,7 @@ def list_datasets(project: Optional[str] = None) -> Dict[str, Any]:
     Returns:
         Dictionary containing dataset list with metadata
     """
+    _ensure_initialized()
     target_project = project or bq_client.billing_project
     logger.info(f"Listing datasets in project: {target_project}")
     
@@ -135,8 +148,6 @@ def list_datasets(project: Optional[str] = None) -> Dict[str, Any]:
         raise
 
 
-@mcp.tool()
-@handle_error
 def list_tables(
     dataset_path: str,
     table_type: Optional[str] = "all"
@@ -153,6 +164,7 @@ def list_tables(
     Returns:
         Dictionary containing table list with metadata
     """
+    _ensure_initialized()
     logger.info(f"Listing tables in dataset: {dataset_path}")
     
     # Validate table type
@@ -266,3 +278,24 @@ def list_tables(
                 "Please check the dataset path and ensure you have access."
             )
         raise
+
+
+def register_discovery_tools(mcp_server, error_handler, bigquery_client, configuration, response_formatter):
+    """Register discovery tools with the MCP server.
+    
+    This function is called by server.py to inject dependencies and register tools.
+    """
+    global mcp, handle_error, bq_client, config, formatter
+    
+    mcp = mcp_server
+    handle_error = error_handler
+    bq_client = bigquery_client
+    config = configuration
+    formatter = response_formatter
+    
+    # Register tools with MCP
+    mcp.tool()(handle_error(list_projects))
+    mcp.tool()(handle_error(list_datasets))
+    mcp.tool()(handle_error(list_tables))
+    
+    logger.info("Discovery tools registered successfully")

@@ -20,14 +20,30 @@ from utils.formatting import ResponseFormatter
 # Load environment variables
 load_dotenv()
 
-# Configure logging
+# Configure logging with more robust path handling
 log_level = os.getenv('LOG_LEVEL', 'INFO')
+
+# Try to create logs directory, but if it fails, use temp directory
+try:
+    script_dir = Path(__file__).parent.parent
+    logs_dir = script_dir / 'logs'
+    logs_dir.mkdir(exist_ok=True)
+    log_file = logs_dir / 'bigquery_mcp.log'
+except Exception as e:
+    # Fallback to temp directory if we can't create logs dir
+    import tempfile
+    logs_dir = Path(tempfile.gettempdir()) / 'bigquery_mcp_logs'
+    logs_dir.mkdir(exist_ok=True)
+    log_file = logs_dir / 'bigquery_mcp.log'
+    print(f"Warning: Using temp directory for logs: {logs_dir}", file=sys.stderr)
+
+# Configure logging
 logging.basicConfig(
     level=getattr(logging, log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/bigquery_mcp.log'),
-        logging.StreamHandler()
+        logging.StreamHandler(sys.stderr),  # Always log to stderr first
+        logging.FileHandler(log_file)
     ]
 )
 logger = logging.getLogger(__name__)
@@ -43,9 +59,6 @@ def initialize_server():
     global config, bq_client, formatter
     
     try:
-        # Ensure logs directory exists
-        Path('logs').mkdir(exist_ok=True)
-        
         # Load configuration
         logger.info("Loading configuration...")
         config = get_config()
@@ -153,8 +166,9 @@ def main():
         # Initialize server components
         initialize_server()
         
-        # Import tools to register them
-        import tools.discovery  # Registers discovery tools
+        # Import and register tools
+        import tools.discovery
+        tools.discovery.register_discovery_tools(mcp, handle_error, bq_client, config, formatter)
         # import tools.analysis  # TODO: Implement analysis tools
         # import tools.execution  # TODO: Implement execution tools
         

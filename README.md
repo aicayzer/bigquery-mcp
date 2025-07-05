@@ -216,6 +216,9 @@ pytest --cov=src tests/
 
 # Run specific test file
 pytest tests/unit/test_discovery.py
+
+# Test server functionality locally
+python tests/test_server_local.py
 ```
 
 ### Project Structure

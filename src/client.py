@@ -3,6 +3,8 @@
 import logging
 from typing import Optional, Tuple, List, Dict, Any
 from google.cloud import bigquery
+from google.cloud.bigquery.dataset import DatasetListItem
+from google.cloud.bigquery.table import TableListItem
 from google.auth import default
 from google.oauth2 import service_account
 
@@ -174,7 +176,7 @@ class BigQueryClient:
                 )
             raise
     
-    def list_datasets(self, project: Optional[str] = None) -> List[bigquery.DatasetListItem]:
+    def list_datasets(self, project: Optional[str] = None) -> List[DatasetListItem]:
         """
         List datasets in a project, filtered by configuration.
         
@@ -203,7 +205,7 @@ class BigQueryClient:
         self,
         dataset_path: str,
         table_type: Optional[str] = None
-    ) -> List[bigquery.TableListItem]:
+    ) -> List[TableListItem]:
         """
         List tables in a dataset.
         
@@ -259,7 +261,7 @@ class BigQueryClient:
         if not self.config.is_project_allowed(target_project):
             raise ProjectAccessError(f"Project '{target_project}' not in allowed list")
         
-        job_config = bigquery.QueryConfig()
+        job_config = bigquery.QueryJobConfig()
         if max_results:
             job_config.max_results = max_results
         
