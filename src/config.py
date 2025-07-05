@@ -67,8 +67,13 @@ class Config:
         
     def _find_config_file(self) -> str:
         """Find configuration file in standard locations."""
+        # Get the directory where this script is located
+        script_dir = Path(__file__).parent.parent
+        
         search_paths = [
-            Path("config/config.yaml"),
+            script_dir / "config" / "config.yaml",
+            script_dir / "config.yaml",
+            Path("config/config.yaml"),  # Current directory
             Path("config.yaml"),
             Path("/app/config/config.yaml"),  # Docker path
         ]
@@ -78,12 +83,17 @@ class Config:
                 return str(path)
         
         # Fall back to example file
-        example_path = Path("config/config.yaml.example")
-        if example_path.exists():
-            logger.warning(f"Using example config from {example_path}")
-            return str(example_path)
+        example_paths = [
+            script_dir / "config" / "config.yaml.example",
+            Path("config/config.yaml.example")
+        ]
         
-        raise FileNotFoundError("No configuration file found")
+        for path in example_paths:
+            if path.exists():
+                logger.warning(f"Using example config from {path}")
+                return str(path)
+        
+        raise FileNotFoundError(f"No configuration file found. Searched in: {[str(p) for p in search_paths]}")
     
     def _load_yaml(self, config_path: str) -> Dict[str, Any]:
         """Load YAML configuration file."""

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-01-05
+
+### Added
+- Analysis tools implementation:
+  - `analyze_table()` - Comprehensive table structure and statistics analysis
+  - `analyze_columns()` - Deep column profiling with null and cardinality analysis
+- Column classification system (identifier, measure, categorical, temporal, etc.)
+- Statistical analysis for numeric columns (min, max, avg, stddev, quartiles)
+- String pattern analysis with length statistics
+- Temporal data range analysis
+- Data quality indicators (completeness, uniqueness)
+- Top value frequency analysis for categorical columns
+- Efficient sampling using TABLESAMPLE for large tables
+- Smart column categorization based on name patterns and data characteristics
+
+### Fixed
+- Config file path resolution for Claude Desktop compatibility
+- Working directory issues when run from different locations
+
 ## [0.2.0] - 2025-01-06
 
 ### Added

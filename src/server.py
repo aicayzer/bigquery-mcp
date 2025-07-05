@@ -168,8 +168,9 @@ def main():
         
         # Import and register tools
         import tools.discovery
+        import tools.analysis
         tools.discovery.register_discovery_tools(mcp, handle_error, bq_client, config, formatter)
-        # import tools.analysis  # TODO: Implement analysis tools
+        tools.analysis.register_analysis_tools(mcp, handle_error, bq_client, config, formatter)
         # import tools.execution  # TODO: Implement execution tools
         
         # Run the MCP server
