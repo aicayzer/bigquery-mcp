@@ -142,30 +142,30 @@ def _classify_column(column_name: str, data_type: str,
     return classification
 
 
-def analyze_table(table_path: str, sample_size: int = 1000) -> Dict[str, Any]:
+def analyze_table(table: str, sample_size: int = 1000) -> Dict[str, Any]:
     """Analyze table structure and statistics.
     
     Provides comprehensive table analysis including row counts, data types,
     null statistics, and cardinality information for each column.
     
     Args:
-        table_path: Full table path as 'project.dataset.table' or 'dataset.table'
+        table: Full table path as 'project.dataset.table' or 'dataset.table'
         sample_size: Number of rows to sample for analysis (default: 1000)
         
     Returns:
         Dictionary containing table analysis results
     """
     _ensure_initialized()
-    logger.info(f"Analyzing table: {table_path} (sample size: {sample_size})")
+    logger.info(f"Analyzing table: {table} (sample size: {sample_size})")
     
     try:
         # Parse table path
-        parts = table_path.split('.')
+        parts = table.split('.')
         if len(parts) == 3:
-            project, dataset, table = parts
+            project, dataset, table_id = parts
         elif len(parts) == 2:
             project = bq_client.billing_project
-            dataset, table = parts
+            dataset, table_id = parts
         else:
             raise ValueError(
                 "Invalid table path. Use 'project.dataset.table' or 'dataset.table'"
@@ -178,12 +178,12 @@ def analyze_table(table_path: str, sample_size: int = 1000) -> Dict[str, Any]:
             )
         
         # Get table metadata
-        table_ref = bq_client.client.get_table(f"{project}.{dataset}.{table}")
+        table_ref = bq_client.client.get_table(f"{project}.{dataset}.{table_id}")
         
         # Get sample data for analysis
         sample_query = f"""
         SELECT *
-        FROM `{project}.{dataset}.{table}`
+        FROM `{project}.{dataset}.{table_id}`
         LIMIT {sample_size}
         """
         
@@ -243,7 +243,7 @@ def analyze_table(table_path: str, sample_size: int = 1000) -> Dict[str, Any]:
             # Compact format focuses on key information
             response = {
                 'status': 'success',
-                'table': f"{project}.{dataset}.{table}",
+                'table': f"{project}.{dataset}.{table_id}",
                 'total_rows': table_ref.num_rows,
                 'size_mb': round((table_ref.num_bytes or 0) / (1024 * 1024), 2),
                 'columns': [
@@ -269,8 +269,8 @@ def analyze_table(table_path: str, sample_size: int = 1000) -> Dict[str, Any]:
                 'table': {
                     'project': project,
                     'dataset': dataset,
-                    'table_id': table,
-                    'full_path': f"{project}.{dataset}.{table}"
+                    'table_id': table_id,
+                    'full_path': f"{project}.{dataset}.{table_id}"
                 },
                 'metadata': {
                     'created': table_ref.created.isoformat() if table_ref.created else None,
@@ -318,14 +318,14 @@ def analyze_table(table_path: str, sample_size: int = 1000) -> Dict[str, Any]:
     except Exception as e:
         if "404" in str(e):
             raise DatasetAccessError(
-                f"Table not found: {table_path}. "
+                f"Table not found: {table}. "
                 "Please check the table path and ensure you have access."
             )
         raise
 
 
 def analyze_columns(
-    table_path: str,
+    table: str,
     columns: Optional[List[str]] = None,
     include_examples: bool = True,
     sample_size: int = 10000
@@ -340,7 +340,7 @@ def analyze_columns(
     - Data quality indicators
     
     Args:
-        table_path: Full table path as 'project.dataset.table' or 'dataset.table'
+        table: Full table path as 'project.dataset.table' or 'dataset.table'
         columns: List of column names to analyze (None = all columns)
         include_examples: Include example values in response
         sample_size: Number of rows to sample for analysis
@@ -349,16 +349,16 @@ def analyze_columns(
         Dictionary containing detailed column analysis
     """
     _ensure_initialized()
-    logger.info(f"Analyzing columns in table: {table_path}")
+    logger.info(f"Analyzing columns in table: {table}")
     
     try:
         # Parse table path
-        parts = table_path.split('.')
+        parts = table.split('.')
         if len(parts) == 3:
-            project, dataset, table = parts
+            project, dataset, table_id = parts
         elif len(parts) == 2:
             project = bq_client.billing_project
-            dataset, table = parts
+            dataset, table_id = parts
         else:
             raise ValueError(
                 "Invalid table path. Use 'project.dataset.table' or 'dataset.table'"
@@ -371,7 +371,7 @@ def analyze_columns(
             )
         
         # Get table metadata
-        table_ref = bq_client.client.get_table(f"{project}.{dataset}.{table}")
+        table_ref = bq_client.client.get_table(f"{project}.{dataset}.{table_id}")
         
         # Determine columns to analyze
         if columns:
@@ -400,7 +400,7 @@ def analyze_columns(
                 analysis_query = f"""
                 WITH sample_data AS (
                     SELECT {col_name}
-                    FROM `{project}.{dataset}.{table}`
+                    FROM `{project}.{dataset}.{table_id}`
                     TABLESAMPLE SYSTEM ({sample_size} ROWS)
                 )
                 SELECT
@@ -421,7 +421,7 @@ def analyze_columns(
                 analysis_query = f"""
                 WITH sample_data AS (
                     SELECT {col_name}
-                    FROM `{project}.{dataset}.{table}`
+                    FROM `{project}.{dataset}.{table_id}`
                     TABLESAMPLE SYSTEM ({sample_size} ROWS)
                 ),
                 value_counts AS (
@@ -451,7 +451,7 @@ def analyze_columns(
                 analysis_query = f"""
                 WITH sample_data AS (
                     SELECT {col_name}
-                    FROM `{project}.{dataset}.{table}`
+                    FROM `{project}.{dataset}.{table_id}`
                     TABLESAMPLE SYSTEM ({sample_size} ROWS)
                 )
                 SELECT
@@ -470,7 +470,7 @@ def analyze_columns(
                 analysis_query = f"""
                 WITH sample_data AS (
                     SELECT {col_name}
-                    FROM `{project}.{dataset}.{table}`
+                    FROM `{project}.{dataset}.{table_id}`
                     TABLESAMPLE SYSTEM ({sample_size} ROWS)
                 )
                 SELECT
@@ -584,7 +584,7 @@ def analyze_columns(
         # Build response
         response = {
             'status': 'success',
-            'table': f"{project}.{dataset}.{table}",
+            'table': f"{project}.{dataset}.{table_id}",
             'columns_analyzed': len(column_analyses),
             'sample_size': sample_size,
             'analysis_method': 'TABLESAMPLE' if table_ref.num_rows > sample_size else 'FULL_SCAN',
@@ -617,7 +617,7 @@ def analyze_columns(
     except Exception as e:
         if "404" in str(e):
             raise DatasetAccessError(
-                f"Table not found: {table_path}. "
+                f"Table not found: {table}. "
                 "Please check the table path and ensure you have access."
             )
         raise
@@ -636,7 +636,7 @@ def register_analysis_tools(mcp_server, error_handler, bigquery_client, configur
     config = configuration
     formatter = response_formatter
     
-    # Register tools with MCP
+    # Register tools with MCP - let FastMCP handle protocol translation
     mcp.tool()(handle_error(analyze_table))
     mcp.tool()(handle_error(analyze_columns))
     

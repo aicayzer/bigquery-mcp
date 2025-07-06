@@ -9,8 +9,8 @@ from datetime import datetime, date, time
 from decimal import Decimal
 
 from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter
-from utils.errors import QueryExecutionError, SecurityError
-from utils.sql_validator import SQLValidator
+from utils.errors import QueryExecutionError, SecurityError, SQLValidationError
+from utils.validation import SQLValidator
 
 logger = logging.getLogger(__name__)
 
@@ -36,30 +36,20 @@ def _validate_query_safety(query: str) -> None:
     
     Raises SecurityError if query contains forbidden operations.
     """
-    # Use SQL validator to check for banned keywords
-    validator = SQLValidator(config.security.banned_sql_keywords)
+    # Use SQL validator with the global config
+    validator = SQLValidator(config)
     
-    if not validator.is_safe(query):
-        violations = validator.get_violations(query)
-        raise SecurityError(
-            f"Query contains forbidden operations: {', '.join(violations)}. "
-            f"Only SELECT queries are allowed."
-        )
+    try:
+        validator.validate_query(query)
+    except SQLValidationError as e:
+        raise SecurityError(str(e))
     
-    # Additional safety checks
+    # Additional safety checks specific to execution
     query_upper = query.upper().strip()
     
-    # Ensure it's a SELECT query
+    # Ensure it's a SELECT query (WITH is allowed for CTEs)
     if not query_upper.startswith('SELECT') and not query_upper.startswith('WITH'):
         raise SecurityError("Only SELECT queries are allowed")
-    
-    # Check for LIMIT if required
-    if config.security.require_explicit_limits:
-        if 'LIMIT' not in query_upper:
-            raise SecurityError(
-                "Query must include an explicit LIMIT clause. "
-                f"Maximum allowed: {config.limits.max_row_limit}"
-            )
 
 
 def _format_query_results(results: List[Dict], format_type: str = 'json') -> Union[str, List[Dict]]:
@@ -373,86 +363,6 @@ def validate_query(query: str) -> Dict[str, Any]:
         }
 
 
-def get_query_history(limit: int = 10) -> Dict[str, Any]:
-    """Get recent query history from the current project.
-    
-    Args:
-        limit: Maximum number of queries to return
-        
-    Returns:
-        Dictionary containing recent queries
-    """
-    _ensure_initialized()
-    logger.info(f"Fetching query history (limit={limit})")
-    
-    try:
-        # Query the INFORMATION_SCHEMA for job history
-        history_query = f"""
-        SELECT
-            creation_time,
-            project_id,
-            user_email,
-            job_type,
-            statement_type,
-            total_bytes_processed,
-            total_slot_ms,
-            TIMESTAMP_DIFF(end_time, start_time, MILLISECOND) as duration_ms,
-            state,
-            error_result.message as error_message,
-            query
-        FROM `{bq_client.billing_project}.region-{bq_client.client.location}.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
-        WHERE job_type = 'QUERY'
-        AND creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-        ORDER BY creation_time DESC
-        LIMIT {limit}
-        """
-        
-        # Execute without safety checks (this is a system query)
-        job_config = QueryJobConfig(use_query_cache=True)
-        query_job = bq_client.client.query(history_query, job_config=job_config)
-        results = list(query_job.result())
-        
-        # Format results
-        queries = []
-        for row in results:
-            query_info = {
-                'timestamp': row.creation_time.isoformat(),
-                'project': row.project_id,
-                'user': row.user_email,
-                'state': row.state,
-                'duration_ms': row.duration_ms,
-                'bytes_processed': row.total_bytes_processed,
-                'slot_ms': row.total_slot_ms
-            }
-            
-            # Add query preview
-            if row.query:
-                preview = row.query[:200]
-                if len(row.query) > 200:
-                    preview += "..."
-                query_info['query_preview'] = preview
-            
-            # Add error if present
-            if row.error_message:
-                query_info['error'] = row.error_message
-            
-            queries.append(query_info)
-        
-        return {
-            'status': 'success',
-            'query_count': len(queries),
-            'queries': queries
-        }
-        
-    except Exception as e:
-        logger.warning(f"Failed to fetch query history: {e}")
-        return {
-            'status': 'error',
-            'error': f"Could not fetch query history: {str(e)}",
-            'note': 'Query history requires access to INFORMATION_SCHEMA'
-        }
-
-
 def register_execution_tools(mcp_server, error_handler, bigquery_client, configuration, response_formatter):
     """Register execution tools with the MCP server.
     
@@ -466,9 +376,8 @@ def register_execution_tools(mcp_server, error_handler, bigquery_client, configu
     config = configuration
     formatter = response_formatter
     
-    # Register tools with MCP
+    # Register tools with MCP - let FastMCP handle protocol translation
     mcp.tool()(handle_error(execute_query))
     mcp.tool()(handle_error(validate_query))
-    mcp.tool()(handle_error(get_query_history))
     
     logger.info("Execution tools registered successfully")

@@ -2,12 +2,16 @@
 
 server:
   name: "BigQuery Development Server"
-  version: "0.4.0"
+  version: "0.4.3"
 
 # BigQuery configuration  
 bigquery:
   # Default project for billing and unqualified table references
   billing_project: "your-billing-project"
+  
+  # BigQuery location/region (e.g., US, EU, asia-northeast1)
+  # Default: EU
+  location: "EU"
   
   # Optional: Path to service account JSON key file
   # If not provided, uses Application Default Credentials

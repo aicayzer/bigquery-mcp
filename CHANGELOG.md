@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2025-07-06
+
+### Fixed
+- Fixed BigQuery client location/region configuration
+  - Added location property to BigQuery client initialization
+  - Location now configurable via config.yaml (defaults to EU)
+  - Fixed INFORMATION_SCHEMA queries by using proper region qualifier
+- Fixed SQL generation bug in `analyze_columns` tool
+  - Simplified complex queries to avoid JOIN issues
+  - Improved TABLESAMPLE usage for better performance
+- Fixed query timeout configuration
+  - Timeout now properly configurable per tool
+  - Default timeout applied from configuration
+
+### Changed
+- Standardized parameter names across all tools:
+  - `dataset_path` → `dataset` in `list_tables()`
+  - `table_path` → `table` in `analyze_table()` and `analyze_columns()`
+- Moved development tools to separate module:
+  - `get_server_info()` and `health_check()` moved to `tools/development.py`
+  - Development tools disabled by default (set `DEVELOPMENT_TOOLS_ENABLED = True` to enable)
+  - These tools are for debugging only and should not be used in production
+
+### Removed
+- Removed `get_query_history()` tool - not essential for core functionality
+- Deleted unnecessary files:
+  - `src/utils/mcp_adapter.py.bak` - backup from failed v0.4.1 approach
+  - `test_fastmcp.py` - debugging artifact
+  - `run_test.sh` - debugging artifact
+
+### Configuration
+- Added `location` setting to bigquery configuration section
+- Default location is now EU (was US)
+- Location can be overridden via `BIGQUERY_LOCATION` environment variable
+
+## [0.4.2] - 2025-07-06
+
+### Fixed
+- Properly fixed parameter handling by removing unnecessary `mcp_tool_adapter`
+- Let FastMCP handle all MCP protocol translation as designed
+- All 10 tools now work correctly with proper parameter passing
+
+### Changed
+- Simplified tool registration to use only `@mcp.tool()` and `@handle_error` decorators
+- Updated all tool registration functions to remove adapter parameter
+- Tools are now registered as `mcp.tool()(handle_error(function))`
+
+### Removed
+- Removed `utils/mcp_adapter.py` - it was interfering with FastMCP's built-in protocol handling
+- Removed all references to `mcp_tool_adapter` from codebase
+
+### Developer Notes
+- FastMCP already handles translation from MCP protocol to function calls
+- Adding our own parameter translation layer was the root cause of the issue
+- The `handle_error` decorator properly preserves function signatures using `functools.wraps`
+
+## [0.4.1] - 2025-07-06 [YANKED]
+
+### Fixed
+- Attempted to fix parameter mismatch issue with custom MCP adapter (incorrect approach)
+
+### Added
+- `utils/mcp_adapter.py` - MCP protocol adapter (removed in v0.4.2)
+
+### Note
+- This version was based on a misunderstanding of how FastMCP works
+- The custom adapter interfered with FastMCP's built-in protocol handling
+- Version 0.4.2 properly fixes the issue
+
 ## [0.4.0] - 2025-01-05
 
 ### Added

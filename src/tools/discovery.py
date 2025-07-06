@@ -149,7 +149,7 @@ def list_datasets(project: Optional[str] = None) -> Dict[str, Any]:
 
 
 def list_tables(
-    dataset_path: str,
+    dataset: str,
     table_type: Optional[str] = "all"
 ) -> Dict[str, Any]:
     """List tables in a dataset with optional type filtering.
@@ -158,14 +158,14 @@ def list_tables(
     dataset. Can filter by table type for specific resource types.
     
     Args:
-        dataset_path: Dataset reference as 'dataset_id' or 'project.dataset_id'
+        dataset: Dataset reference as 'dataset_id' or 'project.dataset_id'
         table_type: Filter by type - 'all', 'table', 'view', or 'materialized_view'
         
     Returns:
         Dictionary containing table list with metadata
     """
     _ensure_initialized()
-    logger.info(f"Listing tables in dataset: {dataset_path}")
+    logger.info(f"Listing tables in dataset: {dataset}")
     
     # Validate table type
     valid_types = ['all', 'table', 'view', 'materialized_view']
@@ -177,19 +177,19 @@ def list_tables(
     
     # Parse dataset path and get tables
     try:
-        project, dataset = bq_client.parse_dataset_path(dataset_path)
+        project, dataset_id = bq_client.parse_dataset_path(dataset)
         
         # Validate access
-        if not config.is_dataset_allowed(project, dataset):
+        if not config.is_dataset_allowed(project, dataset_id):
             project_config = config.get_project(project)
             patterns = project_config.datasets if project_config else []
             raise DatasetAccessError(
-                f"Dataset '{dataset}' in project '{project}' is not accessible. "
+                f"Dataset '{dataset_id}' in project '{project}' is not accessible. "
                 f"Allowed patterns: {', '.join(patterns)}"
             )
         
         # Get tables from BigQuery
-        all_tables = bq_client.list_tables(dataset_path, 
+        all_tables = bq_client.list_tables(dataset, 
                                          table_type if table_type != 'all' else None)
         
         tables = []
@@ -246,14 +246,14 @@ def list_tables(
         
         logger.info(
             f"Found {len(tables)} tables of type '{table_type}' "
-            f"in {project}.{dataset}"
+            f"in {project}.{dataset_id}"
         )
         
         response = {
             'status': 'success',
             'project': project,
-            'dataset': dataset,
-            'full_path': f"{project}.{dataset}",
+            'dataset': dataset_id,
+            'full_path': f"{project}.{dataset_id}",
             'tables': tables,
             'total_tables': len(tables)
         }
@@ -274,7 +274,7 @@ def list_tables(
     except Exception as e:
         if "404" in str(e):
             raise DatasetAccessError(
-                f"Dataset not found: {dataset_path}. "
+                f"Dataset not found: {dataset}. "
                 "Please check the dataset path and ensure you have access."
             )
         raise
@@ -293,7 +293,7 @@ def register_discovery_tools(mcp_server, error_handler, bigquery_client, configu
     config = configuration
     formatter = response_formatter
     
-    # Register tools with MCP
+    # Register tools with MCP - let FastMCP handle protocol translation
     mcp.tool()(handle_error(list_projects))
     mcp.tool()(handle_error(list_datasets))
     mcp.tool()(handle_error(list_tables))

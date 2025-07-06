@@ -41,7 +41,8 @@ class BigQueryClient:
                 )
                 self._client = bigquery.Client(
                     project=self.config.billing_project,
-                    credentials=credentials
+                    credentials=credentials,
+                    location=self.config.location
                 )
             else:
                 # Use Application Default Credentials
@@ -57,7 +58,8 @@ class BigQueryClient:
                     )
                 self._client = bigquery.Client(
                     project=billing_project,
-                    credentials=credentials
+                    credentials=credentials,
+                    location=self.config.location
                 )
             
             logger.info(f"BigQuery client initialized with billing project: {self._client.project}")

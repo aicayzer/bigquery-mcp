@@ -117,6 +117,7 @@ class Config:
         bq_config = self._raw_config.get('bigquery', {})
         self.billing_project = bq_config.get('billing_project', '')
         self.service_account_path = bq_config.get('service_account_path', '')
+        self.location = bq_config.get('location', 'EU')  # Default to EU
         
         # Projects
         self.projects = []
@@ -173,6 +174,11 @@ class Config:
         if env_creds := os.getenv('GOOGLE_APPLICATION_CREDENTIALS'):
             self.service_account_path = env_creds
             logger.info("Using service account from GOOGLE_APPLICATION_CREDENTIALS")
+        
+        # Location
+        if env_location := os.getenv('BIGQUERY_LOCATION'):
+            self.location = env_location
+            logger.info(f"Overriding location from env: {env_location}")
         
         # Compact format
         if env_compact := os.getenv('COMPACT_FORMAT'):

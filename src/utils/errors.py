@@ -41,6 +41,11 @@ class SQLValidationError(BigQueryMCPError):
     pass
 
 
+class SecurityError(BigQueryMCPError):
+    """Raised when a security policy is violated."""
+    pass
+
+
 class QueryExecutionError(BigQueryMCPError):
     """Raised when query execution fails."""
     pass

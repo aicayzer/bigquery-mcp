@@ -3,6 +3,7 @@
 import os
 import sys
 import logging
+import functools
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -82,12 +83,15 @@ def initialize_server():
 # Initialize FastMCP server
 mcp = FastMCP("BigQuery MCP Server")
 
-# Import and register tools after mcp is created
-# This will be done in the next step when we implement the tools
-
 
 def handle_error(func):
-    """Decorator to handle errors consistently across tools."""
+    """Decorator to handle errors consistently across tools.
+    
+    This decorator wraps tool functions to catch and format errors appropriately.
+    It uses functools.wraps to preserve the original function's metadata,
+    which is critical for FastMCP to properly introspect function signatures.
+    """
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -98,66 +102,7 @@ def handle_error(func):
             logger.error(f"Unexpected error in {func.__name__}: {e}", exc_info=True)
             return formatter.format_error(e)
     
-    # Preserve function metadata
-    wrapper.__name__ = func.__name__
-    wrapper.__doc__ = func.__doc__
     return wrapper
-
-
-# Server metadata tool
-@mcp.tool()
-@handle_error
-def get_server_info() -> Dict[str, Any]:
-    """Get information about the BigQuery MCP server.
-    
-    Returns server version, configuration, and available features.
-    """
-    return {
-        'status': 'success',
-        'server': {
-            'name': config.server_name,
-            'version': config.server_version,
-            'billing_project': bq_client.billing_project,
-            'allowed_projects': len(config.projects),
-            'features': {
-                'cross_project_access': True,
-                'column_analysis': True,
-                'sql_validation': True,
-                'compact_mode': formatter.compact_mode
-            }
-        }
-    }
-
-
-# Health check tool
-@mcp.tool()
-@handle_error
-def health_check() -> Dict[str, Any]:
-    """Check server health and BigQuery connectivity.
-    
-    Tests configuration and BigQuery access.
-    """
-    health = {
-        'status': 'healthy',
-        'checks': {
-            'configuration': 'ok',
-            'bigquery_client': 'ok',
-            'authentication': 'ok'
-        }
-    }
-    
-    try:
-        # Test BigQuery access by listing datasets in billing project
-        datasets = list(bq_client.client.list_datasets(
-            bq_client.billing_project,
-            max_results=1
-        ))
-        health['checks']['bigquery_access'] = 'ok'
-    except Exception as e:
-        health['status'] = 'degraded'
-        health['checks']['bigquery_access'] = f'error: {str(e)}'
-    
-    return health
 
 
 def main():
@@ -170,9 +115,12 @@ def main():
         import tools.discovery
         import tools.analysis
         import tools.execution
+        import tools.development
+        
         tools.discovery.register_discovery_tools(mcp, handle_error, bq_client, config, formatter)
         tools.analysis.register_analysis_tools(mcp, handle_error, bq_client, config, formatter)
         tools.execution.register_execution_tools(mcp, handle_error, bq_client, config, formatter)
+        tools.development.register_development_tools(mcp, handle_error, bq_client, config, formatter)
         
         # Run the MCP server
         logger.info("Starting BigQuery MCP server...")

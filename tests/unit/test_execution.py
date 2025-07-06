@@ -14,7 +14,7 @@ from tools.execution import (
     get_query_history,
     register_execution_tools
 )
-from utils.errors import SecurityError, QueryExecutionError
+from utils.errors import SecurityError, QueryExecutionError, SQLValidationError
 
 
 class TestQueryValidation:
