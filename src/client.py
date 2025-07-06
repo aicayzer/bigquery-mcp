@@ -270,11 +270,11 @@ class BigQueryClient:
         # Use timeout from parameter or config
         query_timeout = timeout or self.config.limits.max_query_timeout
         
+        # Note: timeout is not used here - it should be used when calling result()
         return self.client.query(
             sql,
             project=target_project,
-            job_config=job_config,
-            timeout=query_timeout
+            job_config=job_config
         )
     
     def get_table_schema(self, table_path: str) -> List[Dict[str, Any]]:

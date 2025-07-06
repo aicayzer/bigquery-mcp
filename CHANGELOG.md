@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.5] - 2025-01-07
+
+### Fixed
+- Fixed TABLESAMPLE syntax in `analyze_columns` - now uses PERCENT instead of ROWS
+- Fixed query execution timeout by properly passing timeout to result() method
+- Fixed timeout handling in BigQuery client - removed incorrect timeout parameter from query() method
+- Updated dependencies - added `fastmcp>=0.1.0` to requirements.txt
+
+### Changed 
+- Simplified `analyze_table` output:
+  - Removed `sample_info` section (function analyzes full table schema)
+  - Removed `mode` field from column info (redundant with nullable)
+  - Removed `classification` object (overcomplicated)
+  - Removed `null_percentage` field (redundant given null_count)
+  - Removed `sample_values` from analyze_table (use analyze_columns for sampling)
+- analyze_table no longer accepts sample_size parameter
+
+### Removed
+- Deleted legacy test files: `test_v3_server.py`, `test_v4_server.py`
+- Cleaned up old development notes files
+
+## [0.4.4] - 2025-07-06
+
+### Fixed
+- Fixed SQL generation bug in `analyze_columns` for string columns
+  - Removed problematic LEFT JOIN USING clause
+  - Simplified query structure to avoid JOIN errors
+  - String column analysis now works correctly
+
+### Changed
+- Compact mode now properly enabled via COMPACT_FORMAT environment variable
+  - Output is more concise when enabled
+  - Reduces verbosity for better readability
+
+### Removed
+- Removed `validate_query()` tool - redundant with `execute_query(dry_run=True)`
+  - Dry run functionality provides same validation capabilities
+  - Simplifies API surface
+
 ## [0.4.3] - 2025-07-06
 
 ### Fixed

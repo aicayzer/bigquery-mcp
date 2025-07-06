@@ -229,8 +229,9 @@ def execute_query(
                 ] if query_job.schema else []
             }
         
-        # Get results
-        results = list(query_job.result(max_results=max_rows))
+        # Get results with proper timeout handling
+        # Use the same timeout for waiting for results as for query execution
+        results = list(query_job.result(max_results=max_rows, timeout=timeout))
         
         # Convert to dictionaries with proper serialization
         rows = []
@@ -307,62 +308,6 @@ def execute_query(
         raise
 
 
-def validate_query(query: str) -> Dict[str, Any]:
-    """Validate a query without executing it.
-    
-    Performs syntax validation and safety checks on a query.
-    
-    Args:
-        query: SQL query to validate
-        
-    Returns:
-        Dictionary with validation results
-    """
-    _ensure_initialized()
-    logger.info("Validating query")
-    
-    try:
-        # Safety validation
-        _validate_query_safety(query)
-        
-        # Syntax validation via dry run
-        result = execute_query(
-            query,
-            dry_run=True
-        )
-        
-        return {
-            'status': 'success',
-            'valid': True,
-            'message': 'Query is valid',
-            'estimated_bytes': result.get('total_bytes_processed', 0),
-            'estimated_cost_usd': result.get('estimated_cost_usd', 0),
-            'schema': result.get('schema', [])
-        }
-        
-    except SecurityError as e:
-        return {
-            'status': 'error',
-            'valid': False,
-            'error_type': 'security',
-            'message': str(e)
-        }
-    except QueryExecutionError as e:
-        return {
-            'status': 'error', 
-            'valid': False,
-            'error_type': 'syntax',
-            'message': str(e)
-        }
-    except Exception as e:
-        return {
-            'status': 'error',
-            'valid': False,
-            'error_type': 'unknown',
-            'message': f"Validation failed: {str(e)}"
-        }
-
-
 def register_execution_tools(mcp_server, error_handler, bigquery_client, configuration, response_formatter):
     """Register execution tools with the MCP server.
     
@@ -378,6 +323,5 @@ def register_execution_tools(mcp_server, error_handler, bigquery_client, configu
     
     # Register tools with MCP - let FastMCP handle protocol translation
     mcp.tool()(handle_error(execute_query))
-    mcp.tool()(handle_error(validate_query))
     
     logger.info("Execution tools registered successfully")

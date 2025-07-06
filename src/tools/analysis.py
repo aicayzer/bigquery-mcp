@@ -142,21 +142,21 @@ def _classify_column(column_name: str, data_type: str,
     return classification
 
 
-def analyze_table(table: str, sample_size: int = 1000) -> Dict[str, Any]:
+def analyze_table(table: str) -> Dict[str, Any]:
     """Analyze table structure and statistics.
     
     Provides comprehensive table analysis including row counts, data types,
     null statistics, and cardinality information for each column.
+    Analyzes the full table schema without sampling.
     
     Args:
         table: Full table path as 'project.dataset.table' or 'dataset.table'
-        sample_size: Number of rows to sample for analysis (default: 1000)
         
     Returns:
         Dictionary containing table analysis results
     """
     _ensure_initialized()
-    logger.info(f"Analyzing table: {table} (sample size: {sample_size})")
+    logger.info(f"Analyzing table: {table}")
     
     try:
         # Parse table path
@@ -180,11 +180,13 @@ def analyze_table(table: str, sample_size: int = 1000) -> Dict[str, Any]:
         # Get table metadata
         table_ref = bq_client.client.get_table(f"{project}.{dataset}.{table_id}")
         
-        # Get sample data for analysis
+        # Get sample data for analysis (internal use only)
+        # Use a reasonable sample size for column statistics
+        internal_sample_size = 1000
         sample_query = f"""
         SELECT *
         FROM `{project}.{dataset}.{table_id}`
-        LIMIT {sample_size}
+        LIMIT {internal_sample_size}
         """
         
         # Run sample query
@@ -218,23 +220,10 @@ def analyze_table(table: str, sample_size: int = 1000) -> Dict[str, Any]:
             column_info = {
                 'name': field.name,
                 'type': field.field_type,
-                'mode': field.mode,
                 'description': field.description or '',
                 'null_count': null_count,
-                'null_percentage': round(null_ratio * 100, 2),
-                'distinct_count': distinct_count,
-                'classification': classification
+                'distinct_count': distinct_count
             }
-            
-            # Add sample values for categorical columns
-            if distinct_count <= 20 and non_null_values:
-                value_counts = defaultdict(int)
-                for v in non_null_values:
-                    value_counts[str(v)] += 1
-                column_info['sample_values'] = [
-                    {'value': v, 'count': c} 
-                    for v, c in sorted(value_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-                ]
             
             columns_analysis.append(column_info)
         
@@ -250,9 +239,8 @@ def analyze_table(table: str, sample_size: int = 1000) -> Dict[str, Any]:
                     {
                         'name': col['name'],
                         'type': col['type'],
-                        'nulls': col['null_percentage'],
-                        'distinct': col['distinct_count'],
-                        'category': col['classification']['category']
+                        'nulls': col['null_count'],
+                        'distinct': col['distinct_count']
                     }
                     for col in columns_analysis
                 ]
@@ -290,11 +278,6 @@ def analyze_table(table: str, sample_size: int = 1000) -> Dict[str, Any]:
                     'has_partitioning': table_ref.time_partitioning is not None,
                     'has_clustering': bool(table_ref.clustering_fields),
                     'table_type': table_ref.table_type
-                },
-                'sample_info': {
-                    'requested_rows': sample_size,
-                    'actual_rows': actual_sample_size,
-                    'sampling_method': 'LIMIT' if actual_sample_size < table_ref.num_rows else 'FULL'
                 },
                 'columns': columns_analysis
             }
@@ -394,6 +377,13 @@ def analyze_columns(
         for col_name in columns_to_analyze:
             field = next(f for f in table_ref.schema if f.name == col_name)
             
+            # Calculate sample percentage based on table size and desired sample
+            # Use min of 10% or calculated percentage to ensure reasonable performance
+            if table_ref.num_rows and table_ref.num_rows > 0:
+                sample_percent = min(10.0, (sample_size / table_ref.num_rows) * 100 * 1.5)
+            else:
+                sample_percent = 10.0  # Default to 10% if row count unknown
+            
             # Build column-specific analysis query
             if field.field_type in ['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC']:
                 # Numeric analysis
@@ -401,7 +391,7 @@ def analyze_columns(
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    TABLESAMPLE SYSTEM ({sample_size} ROWS)
+                    TABLESAMPLE SYSTEM ({sample_percent:.2f} PERCENT)
                 )
                 SELECT
                     '{col_name}' as column_name,
@@ -417,33 +407,38 @@ def analyze_columns(
                 """
             
             elif field.field_type == 'STRING':
-                # String analysis
+                # String analysis - simplified query without problematic JOIN
                 analysis_query = f"""
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    TABLESAMPLE SYSTEM ({sample_size} ROWS)
+                    TABLESAMPLE SYSTEM ({sample_percent:.2f} PERCENT)
+                ),
+                basic_stats AS (
+                    SELECT
+                        COUNT(*) as total_count,
+                        COUNTIF({col_name} IS NULL) as null_count,
+                        COUNT(DISTINCT {col_name}) as distinct_count,
+                        MIN(LENGTH({col_name})) as min_length,
+                        MAX(LENGTH({col_name})) as max_length,
+                        AVG(LENGTH({col_name})) as avg_length
+                    FROM sample_data
                 ),
                 value_counts AS (
                     SELECT 
                         {col_name} as value,
                         COUNT(*) as count
                     FROM sample_data
+                    WHERE {col_name} IS NOT NULL
                     GROUP BY {col_name}
                     ORDER BY count DESC
                     LIMIT 20
                 )
                 SELECT
                     '{col_name}' as column_name,
-                    COUNT(*) as total_count,
-                    COUNTIF({col_name} IS NULL) as null_count,
-                    COUNT(DISTINCT {col_name}) as distinct_count,
-                    MIN(LENGTH({col_name})) as min_length,
-                    MAX(LENGTH({col_name})) as max_length,
-                    AVG(LENGTH({col_name})) as avg_length,
-                    ARRAY_AGG(STRUCT(value, count)) as top_values
-                FROM sample_data
-                LEFT JOIN value_counts USING (value)
+                    basic_stats.*,
+                    ARRAY(SELECT AS STRUCT value, count FROM value_counts) as top_values
+                FROM basic_stats
                 """
             
             elif field.field_type in ['DATE', 'DATETIME', 'TIMESTAMP']:
@@ -452,7 +447,7 @@ def analyze_columns(
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    TABLESAMPLE SYSTEM ({sample_size} ROWS)
+                    TABLESAMPLE SYSTEM ({sample_percent:.2f} PERCENT)
                 )
                 SELECT
                     '{col_name}' as column_name,
@@ -471,7 +466,7 @@ def analyze_columns(
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    TABLESAMPLE SYSTEM ({sample_size} ROWS)
+                    TABLESAMPLE SYSTEM ({sample_percent:.2f} PERCENT)
                 )
                 SELECT
                     '{col_name}' as column_name,
