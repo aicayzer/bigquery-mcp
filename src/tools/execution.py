@@ -287,25 +287,32 @@ def execute_query(
         return response
         
     except Exception as e:
-        if "403" in str(e):
+        error_str = str(e)
+        logger.error(f"Query execution error: {error_str}")
+        
+        # Handle specific error types
+        if "403" in error_str:
             raise QueryExecutionError(
                 f"Permission denied. Ensure you have bigquery.jobs.create permission "
                 f"and access to the referenced tables."
             )
-        elif "404" in str(e):
+        elif "404" in error_str:
             raise QueryExecutionError(
                 f"Table not found. Check the table references in your query."
             )
-        elif "Syntax error" in str(e):
+        elif "Syntax error" in error_str:
             raise QueryExecutionError(
-                f"SQL syntax error: {str(e)}"
+                f"SQL syntax error: {error_str}"
             )
-        elif "timeout" in str(e).lower():
+        elif isinstance(e, TimeoutError) or "TimeoutError" in str(type(e)):
+            # Only treat actual timeout errors as timeouts
             raise QueryExecutionError(
                 f"Query timeout after {timeout} seconds. "
                 f"Try a smaller query or increase the timeout."
             )
-        raise
+        else:
+            # For any other error, preserve the original message
+            raise QueryExecutionError(f"Query execution failed: {error_str}")
 
 
 def register_execution_tools(mcp_server, error_handler, bigquery_client, configuration, response_formatter):

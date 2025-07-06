@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.6] - 2025-01-07
+
+### Fixed
+- Fixed import path for FastMCP - changed from `mcp.server.fastmcp` to `fastmcp`
+- Improved error handling in execute_query to avoid false timeout errors
+- Fixed error message logic that was incorrectly catching any error containing "timeout"
+
+### Changed
+- Updated README to reflect correct analyze_columns parameters
+
+### Removed
+- Removed outdated test_server_startup.py that referenced non-existent functions
+
 ## [0.4.5] - 2025-01-07
 
 ### Fixed

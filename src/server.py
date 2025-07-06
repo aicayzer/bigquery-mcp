@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 from dotenv import load_dotenv
 
 from config import get_config

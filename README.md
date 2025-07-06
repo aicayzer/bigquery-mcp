@@ -142,7 +142,8 @@ list_tables("project.dataset", table_type="view")
 ### Analysis Tools
 
 #### analyze_table(table_path)
-Get comprehensive table information including schema and metadata.
+Get comprehensive table information including schema and column statistics.
+Analyzes the full table schema without sampling.
 
 ```python
 # Analyze table with full path
@@ -152,18 +153,19 @@ analyze_table("project.dataset.table")
 analyze_table("dataset.table")
 ```
 
-#### analyze_columns(table_path, analysis_type, columns)
+#### analyze_columns(table_path, columns, include_examples, sample_size)
 Perform column-level analysis for data quality insights.
 
 ```python
-# Analyze nulls and cardinality for all columns
+# Analyze all columns with sampling
 analyze_columns("dataset.table")
 
-# Analyze only null counts for specific columns
+# Analyze specific columns
 analyze_columns(
     "dataset.table",
-    analysis_type=["nulls"],
-    columns=["user_id", "created_at"]
+    columns=["user_id", "created_at"],
+    include_examples=True,
+    sample_size=10000
 )
 ```
 
