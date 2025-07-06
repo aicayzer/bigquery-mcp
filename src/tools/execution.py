@@ -1,1 +1,474 @@
-"""Query execution tool for running BigQuery SQL."""
+"""Query execution tools with safety checks and result formatting."""
+
+import logging
+from typing import Dict, Any, List, Optional, Union
+import json
+import csv
+import io
+from datetime import datetime, date, time
+from decimal import Decimal
+
+from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter
+from utils.errors import QueryExecutionError, SecurityError
+from utils.sql_validator import SQLValidator
+
+logger = logging.getLogger(__name__)
+
+# Global references that will be set by server.py
+mcp = None
+handle_error = None
+bq_client = None
+config = None
+formatter = None
+
+
+def _ensure_initialized():
+    """Ensure that global dependencies are initialized."""
+    if any(x is None for x in [mcp, bq_client, config, formatter]):
+        raise RuntimeError(
+            "Execution tools not properly initialized. "
+            "These tools must be used through the MCP server."
+        )
+
+
+def _validate_query_safety(query: str) -> None:
+    """Validate query for safety and security.
+    
+    Raises SecurityError if query contains forbidden operations.
+    """
+    # Use SQL validator to check for banned keywords
+    validator = SQLValidator(config.security.banned_sql_keywords)
+    
+    if not validator.is_safe(query):
+        violations = validator.get_violations(query)
+        raise SecurityError(
+            f"Query contains forbidden operations: {', '.join(violations)}. "
+            f"Only SELECT queries are allowed."
+        )
+    
+    # Additional safety checks
+    query_upper = query.upper().strip()
+    
+    # Ensure it's a SELECT query
+    if not query_upper.startswith('SELECT') and not query_upper.startswith('WITH'):
+        raise SecurityError("Only SELECT queries are allowed")
+    
+    # Check for LIMIT if required
+    if config.security.require_explicit_limits:
+        if 'LIMIT' not in query_upper:
+            raise SecurityError(
+                "Query must include an explicit LIMIT clause. "
+                f"Maximum allowed: {config.limits.max_row_limit}"
+            )
+
+
+def _format_query_results(results: List[Dict], format_type: str = 'json') -> Union[str, List[Dict]]:
+    """Format query results based on requested format.
+    
+    Args:
+        results: List of row dictionaries
+        format_type: Output format ('json', 'csv', 'table')
+        
+    Returns:
+        Formatted results
+    """
+    if format_type == 'json':
+        return results
+    
+    elif format_type == 'csv':
+        if not results:
+            return ""
+        
+        # Get column names from first row
+        columns = list(results[0].keys())
+        
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(results)
+        
+        return output.getvalue()
+    
+    elif format_type == 'table':
+        if not results:
+            return "No results"
+        
+        # Simple ASCII table format
+        columns = list(results[0].keys())
+        
+        # Calculate column widths
+        widths = {col: len(col) for col in columns}
+        for row in results:
+            for col, val in row.items():
+                widths[col] = max(widths[col], len(str(val)))
+        
+        # Build table
+        lines = []
+        
+        # Header
+        header = " | ".join(col.ljust(widths[col]) for col in columns)
+        lines.append(header)
+        lines.append("-" * len(header))
+        
+        # Rows
+        for row in results:
+            line = " | ".join(
+                str(row.get(col, '')).ljust(widths[col]) 
+                for col in columns
+            )
+            lines.append(line)
+        
+        return "\n".join(lines)
+    
+    else:
+        raise ValueError(f"Unknown format type: {format_type}")
+
+
+def _serialize_value(value: Any) -> Any:
+    """Convert BigQuery values to JSON-serializable format."""
+    if value is None:
+        return None
+    elif isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    elif isinstance(value, Decimal):
+        return float(value)
+    elif isinstance(value, bytes):
+        return value.decode('utf-8', errors='replace')
+    elif isinstance(value, dict):
+        return {k: _serialize_value(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [_serialize_value(v) for v in value]
+    else:
+        return value
+
+
+def execute_query(
+    query: str,
+    format: str = 'json',
+    max_rows: Optional[int] = None,
+    timeout: Optional[int] = None,
+    dry_run: bool = False,
+    parameters: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Execute a BigQuery SQL query with safety checks and formatting.
+    
+    Executes SELECT queries against BigQuery with comprehensive safety
+    validation, result limiting, and multiple output formats.
+    
+    Args:
+        query: SQL query to execute (SELECT only)
+        format: Output format - 'json', 'csv', or 'table'
+        max_rows: Maximum rows to return (default: from config)
+        timeout: Query timeout in seconds (default: from config)
+        dry_run: If True, validate and estimate query without executing
+        parameters: Named query parameters as {name: value} dict
+        
+    Returns:
+        Dictionary containing query results and metadata
+        
+    Raises:
+        SecurityError: If query contains forbidden operations
+        QueryExecutionError: If query execution fails
+    """
+    _ensure_initialized()
+    logger.info(f"Executing query (dry_run={dry_run}, format={format})")
+    
+    try:
+        # Validate query safety
+        _validate_query_safety(query)
+        
+        # Apply limits
+        if max_rows is None:
+            max_rows = config.limits.default_row_limit
+        else:
+            max_rows = min(max_rows, config.limits.max_row_limit)
+        
+        if timeout is None:
+            timeout = config.limits.max_query_timeout
+        
+        # Add LIMIT if not present and not dry run
+        query_upper = query.upper().strip()
+        if not dry_run and 'LIMIT' not in query_upper:
+            query = f"{query.rstrip().rstrip(';')} LIMIT {max_rows}"
+        
+        # Configure query job
+        job_config = QueryJobConfig(
+            use_query_cache=True,
+            dry_run=dry_run,
+            maximum_bytes_billed=config.limits.max_bytes_processed,
+            timeout_ms=timeout * 1000 if timeout else None
+        )
+        
+        # Add parameters if provided
+        if parameters:
+            query_parameters = []
+            for name, value in parameters.items():
+                # Auto-detect parameter type
+                param = ScalarQueryParameter(name, None, value)
+                query_parameters.append(param)
+            job_config.query_parameters = query_parameters
+        
+        # Log query if enabled
+        if config.log_queries:
+            log_query = query[:config.max_query_log_length]
+            if len(query) > config.max_query_log_length:
+                log_query += "..."
+            logger.info(f"Query: {log_query}")
+        
+        # Execute query
+        query_job = bq_client.client.query(query, job_config=job_config)
+        
+        # Handle dry run
+        if dry_run:
+            return {
+                'status': 'success',
+                'dry_run': True,
+                'total_bytes_processed': query_job.total_bytes_processed,
+                'total_bytes_billed': query_job.total_bytes_billed,
+                'estimated_cost_usd': round(
+                    (query_job.total_bytes_billed / 1e12) * 5.0, 4
+                ),  # $5 per TB
+                'schema': [
+                    {
+                        'name': field.name,
+                        'type': field.field_type,
+                        'mode': field.mode
+                    }
+                    for field in query_job.schema
+                ] if query_job.schema else []
+            }
+        
+        # Get results
+        results = list(query_job.result(max_results=max_rows))
+        
+        # Convert to dictionaries with proper serialization
+        rows = []
+        for row in results:
+            row_dict = {}
+            for field in query_job.schema:
+                value = row[field.name]
+                row_dict[field.name] = _serialize_value(value)
+            rows.append(row_dict)
+        
+        # Format results
+        formatted_results = _format_query_results(rows, format)
+        
+        # Build response
+        response = {
+            'status': 'success',
+            'row_count': len(rows),
+            'total_rows': query_job.total_rows if hasattr(query_job, 'total_rows') else len(rows),
+            'bytes_processed': query_job.total_bytes_processed,
+            'bytes_billed': query_job.total_bytes_billed,
+            'cache_hit': query_job.cache_hit if hasattr(query_job, 'cache_hit') else False,
+            'slot_millis': query_job.slot_millis if hasattr(query_job, 'slot_millis') else None
+        }
+        
+        # Add results based on format
+        if format == 'json':
+            response['results'] = formatted_results
+            
+            # Add schema in non-compact mode
+            if not formatter.compact_mode:
+                response['schema'] = [
+                    {
+                        'name': field.name,
+                        'type': field.field_type,
+                        'mode': field.mode,
+                        'description': field.description or ''
+                    }
+                    for field in query_job.schema
+                ]
+        else:
+            response['format'] = format
+            response['data'] = formatted_results
+        
+        # Add execution time
+        if hasattr(query_job, 'created') and hasattr(query_job, 'ended'):
+            execution_time = (query_job.ended - query_job.created).total_seconds()
+            response['execution_time_seconds'] = round(execution_time, 3)
+        
+        # Log results if enabled (only in debug mode)
+        if config.log_results and logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Query returned {len(rows)} rows")
+        
+        return response
+        
+    except Exception as e:
+        if "403" in str(e):
+            raise QueryExecutionError(
+                f"Permission denied. Ensure you have bigquery.jobs.create permission "
+                f"and access to the referenced tables."
+            )
+        elif "404" in str(e):
+            raise QueryExecutionError(
+                f"Table not found. Check the table references in your query."
+            )
+        elif "Syntax error" in str(e):
+            raise QueryExecutionError(
+                f"SQL syntax error: {str(e)}"
+            )
+        elif "timeout" in str(e).lower():
+            raise QueryExecutionError(
+                f"Query timeout after {timeout} seconds. "
+                f"Try a smaller query or increase the timeout."
+            )
+        raise
+
+
+def validate_query(query: str) -> Dict[str, Any]:
+    """Validate a query without executing it.
+    
+    Performs syntax validation and safety checks on a query.
+    
+    Args:
+        query: SQL query to validate
+        
+    Returns:
+        Dictionary with validation results
+    """
+    _ensure_initialized()
+    logger.info("Validating query")
+    
+    try:
+        # Safety validation
+        _validate_query_safety(query)
+        
+        # Syntax validation via dry run
+        result = execute_query(
+            query,
+            dry_run=True
+        )
+        
+        return {
+            'status': 'success',
+            'valid': True,
+            'message': 'Query is valid',
+            'estimated_bytes': result.get('total_bytes_processed', 0),
+            'estimated_cost_usd': result.get('estimated_cost_usd', 0),
+            'schema': result.get('schema', [])
+        }
+        
+    except SecurityError as e:
+        return {
+            'status': 'error',
+            'valid': False,
+            'error_type': 'security',
+            'message': str(e)
+        }
+    except QueryExecutionError as e:
+        return {
+            'status': 'error', 
+            'valid': False,
+            'error_type': 'syntax',
+            'message': str(e)
+        }
+    except Exception as e:
+        return {
+            'status': 'error',
+            'valid': False,
+            'error_type': 'unknown',
+            'message': f"Validation failed: {str(e)}"
+        }
+
+
+def get_query_history(limit: int = 10) -> Dict[str, Any]:
+    """Get recent query history from the current project.
+    
+    Args:
+        limit: Maximum number of queries to return
+        
+    Returns:
+        Dictionary containing recent queries
+    """
+    _ensure_initialized()
+    logger.info(f"Fetching query history (limit={limit})")
+    
+    try:
+        # Query the INFORMATION_SCHEMA for job history
+        history_query = f"""
+        SELECT
+            creation_time,
+            project_id,
+            user_email,
+            job_type,
+            statement_type,
+            total_bytes_processed,
+            total_slot_ms,
+            TIMESTAMP_DIFF(end_time, start_time, MILLISECOND) as duration_ms,
+            state,
+            error_result.message as error_message,
+            query
+        FROM `{bq_client.billing_project}.region-{bq_client.client.location}.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+        WHERE job_type = 'QUERY'
+        AND creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+        ORDER BY creation_time DESC
+        LIMIT {limit}
+        """
+        
+        # Execute without safety checks (this is a system query)
+        job_config = QueryJobConfig(use_query_cache=True)
+        query_job = bq_client.client.query(history_query, job_config=job_config)
+        results = list(query_job.result())
+        
+        # Format results
+        queries = []
+        for row in results:
+            query_info = {
+                'timestamp': row.creation_time.isoformat(),
+                'project': row.project_id,
+                'user': row.user_email,
+                'state': row.state,
+                'duration_ms': row.duration_ms,
+                'bytes_processed': row.total_bytes_processed,
+                'slot_ms': row.total_slot_ms
+            }
+            
+            # Add query preview
+            if row.query:
+                preview = row.query[:200]
+                if len(row.query) > 200:
+                    preview += "..."
+                query_info['query_preview'] = preview
+            
+            # Add error if present
+            if row.error_message:
+                query_info['error'] = row.error_message
+            
+            queries.append(query_info)
+        
+        return {
+            'status': 'success',
+            'query_count': len(queries),
+            'queries': queries
+        }
+        
+    except Exception as e:
+        logger.warning(f"Failed to fetch query history: {e}")
+        return {
+            'status': 'error',
+            'error': f"Could not fetch query history: {str(e)}",
+            'note': 'Query history requires access to INFORMATION_SCHEMA'
+        }
+
+
+def register_execution_tools(mcp_server, error_handler, bigquery_client, configuration, response_formatter):
+    """Register execution tools with the MCP server.
+    
+    This function is called by server.py to inject dependencies and register tools.
+    """
+    global mcp, handle_error, bq_client, config, formatter
+    
+    mcp = mcp_server
+    handle_error = error_handler
+    bq_client = bigquery_client
+    config = configuration
+    formatter = response_formatter
+    
+    # Register tools with MCP
+    mcp.tool()(handle_error(execute_query))
+    mcp.tool()(handle_error(validate_query))
+    mcp.tool()(handle_error(get_query_history))
+    
+    logger.info("Execution tools registered successfully")

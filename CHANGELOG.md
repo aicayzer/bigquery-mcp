@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-01-05
+
+### Added
+- Query execution tools implementation:
+  - `execute_query()` - Execute SELECT queries with safety validation
+  - `validate_query()` - Validate query syntax and estimate costs without execution
+  - `get_query_history()` - Retrieve recent query history from INFORMATION_SCHEMA
+- SQL safety validation with configurable banned keywords
+- Multiple output formats (JSON, CSV, table)
+- Query result serialization for complex BigQuery types
+- Parameterized query support
+- Dry run capability for cost estimation
+- Automatic LIMIT injection for safety
+- Query timeout and byte limit enforcement
+- Cache hit detection and slot usage reporting
+
+### Security
+- Enforced SELECT-only queries
+- Configurable banned SQL keywords
+- Maximum bytes billed limit
+- Required LIMIT clause option
+
 ## [0.3.0] - 2025-01-05
 
 ### Added
