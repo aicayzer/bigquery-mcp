@@ -239,16 +239,22 @@ def execute_query(
 
         # Get results with proper timeout handling
         # Use the same timeout for waiting for results as for query execution
-        results = list(query_job.result(max_results=max_rows, timeout=timeout))
+        query_result = query_job.result(max_results=max_rows, timeout=timeout)
+        results = list(query_result) if query_result is not None else []
 
         # Convert to dictionaries with proper serialization
         rows = []
-        for row in results:
-            row_dict = {}
-            for field in query_job.schema:
-                value = row[field.name]
-                row_dict[field.name] = _serialize_value(value)
-            rows.append(row_dict)
+        if results and query_job.schema:
+            for row in results:
+                row_dict = {}
+                for field in query_job.schema:
+                    try:
+                        value = row[field.name]
+                        row_dict[field.name] = _serialize_value(value)
+                    except (KeyError, IndexError) as e:
+                        logger.warning(f"Failed to access field {field.name}: {e}")
+                        row_dict[field.name] = None
+                rows.append(row_dict)
 
         # Format results
         formatted_results = _format_query_results(rows, format)
