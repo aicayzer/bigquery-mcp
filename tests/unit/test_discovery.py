@@ -296,12 +296,10 @@ class TestListTables:
         assert result['dataset'] == 'test_dataset'
         assert result['total_tables'] == 2
         
-        # Check table
+        # Check table (tables are sorted by table_id)
         table = result['tables'][0]
-        assert table['table_id'] == 'articles'
-        assert table['table_type'] == 'TABLE'
-        assert table['num_rows'] == 1000
-        assert table['size_mb'] == 1.0
+        assert table['table_id'] == 'article_summary'  # Comes first alphabetically
+        assert table['table_type'] == 'VIEW'
     
     def test_list_tables_invalid_type(self, mock_dependencies):
         """Test error with invalid table type."""

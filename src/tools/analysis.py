@@ -309,7 +309,7 @@ def analyze_table(table: str) -> Dict[str, Any]:
 
 def analyze_columns(
     table: str,
-    columns: Optional[List[str]] = None,
+    columns: str = "",
     include_examples: bool = True,
     sample_size: int = 10000
 ) -> Dict[str, Any]:
@@ -324,7 +324,7 @@ def analyze_columns(
     
     Args:
         table: Full table path as 'project.dataset.table' or 'dataset.table'
-        columns: List of column names to analyze (None = all columns)
+        columns: Comma-separated list of column names to analyze (empty = all columns)
         include_examples: Include example values in response
         sample_size: Number of rows to sample for analysis
         
@@ -358,14 +358,16 @@ def analyze_columns(
         
         # Determine columns to analyze
         if columns:
+            # Parse comma-separated column names
+            columns_to_analyze = [col.strip() for col in columns.split(',') if col.strip()]
+            
             # Validate requested columns exist
             schema_fields = {field.name: field for field in table_ref.schema}
-            invalid_columns = [col for col in columns if col not in schema_fields]
+            invalid_columns = [col for col in columns_to_analyze if col not in schema_fields]
             if invalid_columns:
                 raise ValueError(
                     f"Columns not found in table: {', '.join(invalid_columns)}"
                 )
-            columns_to_analyze = columns
         else:
             # Analyze all columns
             columns_to_analyze = [field.name for field in table_ref.schema]
@@ -377,12 +379,12 @@ def analyze_columns(
         for col_name in columns_to_analyze:
             field = next(f for f in table_ref.schema if f.name == col_name)
             
-            # Calculate sample percentage based on table size and desired sample
-            # Use min of 10% or calculated percentage to ensure reasonable performance
+            # Calculate sample size based on table size
+            # Use RAND() for more reliable sampling
             if table_ref.num_rows and table_ref.num_rows > 0:
-                sample_percent = min(10.0, (sample_size / table_ref.num_rows) * 100 * 1.5)
+                sample_ratio = min(1.0, (sample_size * 1.5) / table_ref.num_rows)
             else:
-                sample_percent = 10.0  # Default to 10% if row count unknown
+                sample_ratio = 0.1  # Default to 10% if row count unknown
             
             # Build column-specific analysis query
             if field.field_type in ['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC']:
@@ -391,7 +393,8 @@ def analyze_columns(
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    TABLESAMPLE SYSTEM ({sample_percent:.2f} PERCENT)
+                    WHERE RAND() < {sample_ratio}
+                    LIMIT {sample_size}
                 )
                 SELECT
                     '{col_name}' as column_name,
@@ -412,7 +415,8 @@ def analyze_columns(
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    TABLESAMPLE SYSTEM ({sample_percent:.2f} PERCENT)
+                    WHERE RAND() < {sample_ratio}
+                    LIMIT {sample_size}
                 ),
                 basic_stats AS (
                     SELECT
@@ -447,7 +451,8 @@ def analyze_columns(
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    TABLESAMPLE SYSTEM ({sample_percent:.2f} PERCENT)
+                    WHERE RAND() < {sample_ratio}
+                    LIMIT {sample_size}
                 )
                 SELECT
                     '{col_name}' as column_name,
@@ -466,7 +471,8 @@ def analyze_columns(
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    TABLESAMPLE SYSTEM ({sample_percent:.2f} PERCENT)
+                    WHERE RAND() < {sample_ratio}
+                    LIMIT {sample_size}
                 )
                 SELECT
                     '{col_name}' as column_name,
@@ -582,7 +588,7 @@ def analyze_columns(
             'table': f"{project}.{dataset}.{table_id}",
             'columns_analyzed': len(column_analyses),
             'sample_size': sample_size,
-            'analysis_method': 'TABLESAMPLE' if table_ref.num_rows > sample_size else 'FULL_SCAN',
+            'analysis_method': 'RANDOM_SAMPLING' if table_ref.num_rows > sample_size else 'FULL_SCAN',
             'columns': column_analyses
         }
         

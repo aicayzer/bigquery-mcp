@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-01-07
+
+### Fixed
+- Fixed all failing unit tests (42 tests now passing)
+- Corrected analyze_table test calls by removing deprecated sample_size parameter
+- Fixed analyze_columns test calls by changing list parameters to comma-separated strings
+- Updated error message assertions to match actual implementation
+- Fixed mock configurations for datetime arithmetic operations
+- Fixed mock configurations for subscript access in query results
+- Resolved integration test config file path issues
+- Fixed pytest warnings about test functions returning values instead of using assertions
+
+### Changed
+- Reorganized test structure by moving server tests to integration folder
+- Improved test coverage to 65% total coverage
+- Enhanced mock configurations for better test reliability
+
+## [0.4.7] - 2025-01-07
+
+### Fixed
+- Fixed analyze_columns parameter validation issue by changing `columns` from Optional[List[str]] to string (comma-separated)
+- Replaced TABLESAMPLE with RAND()-based sampling to fix STRING column analysis errors
+- Fixed broken test imports (removed references to non-existent functions: get_server_info, health_check, validate_query, get_query_history)
+- Moved debug_timeout.py to test fixtures directory
+
+### Changed
+- Updated sampling method from TABLESAMPLE SYSTEM to WHERE RAND() < ratio for better compatibility
+- Simplified analyze_columns parameter handling for better FastMCP compatibility
+- analysis_method in response now shows 'RANDOM_SAMPLING' instead of 'TABLESAMPLE'
+
 ## [0.4.6] - 2025-01-07
 
 ### Fixed

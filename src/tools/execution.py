@@ -186,9 +186,12 @@ def execute_query(
         job_config = QueryJobConfig(
             use_query_cache=True,
             dry_run=dry_run,
-            maximum_bytes_billed=config.limits.max_bytes_processed,
-            timeout_ms=timeout * 1000 if timeout else None
+            maximum_bytes_billed=config.limits.max_bytes_processed
         )
+        
+        # Set job timeout if specified
+        if timeout:
+            job_config.job_timeout_ms = timeout * 1000
         
         # Add parameters if provided
         if parameters:

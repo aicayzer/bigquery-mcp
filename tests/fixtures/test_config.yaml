@@ -1,0 +1,28 @@
+server:
+  name: Test Server
+  version: 0.4.7
+
+bigquery:
+  billing_project: test-billing
+  service_account_path: ""
+
+projects:
+  - project_id: analytics-test
+    project_name: Analytics Test
+    description: Test analytics project
+    datasets: ["prod_*", "test_*"]
+  - project_id: raw-test
+    project_name: Raw Test
+    description: Test raw data
+    datasets: ["*"]
+
+limits:
+  default_row_limit: 20
+  max_query_timeout: 60
+
+security:
+  banned_sql_keywords: ["CREATE", "DROP"]
+  select_only: true
+
+formatting:
+  compact_format: false
