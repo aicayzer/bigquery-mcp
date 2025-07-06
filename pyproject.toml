@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bigquery-mcp"
-version = "0.4.7"
+version = "0.5.0"
 description = "A Model Context Protocol server for BigQuery with cross-project support"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"

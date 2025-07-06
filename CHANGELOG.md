@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2025-01-07
 
+### Added
+- Docker support with multi-stage build for production deployment
+- Docker Compose configuration for easy local development
+- GitHub Actions workflow for automatic releases on main branch
+- Scripts directory with lint.sh for local code quality checks
+- Comprehensive documentation in docs/ folder:
+  - architecture.md - System design and specification
+  - tools.md - Detailed tool reference with examples
+
 ### Fixed
 - Fixed all failing unit tests (42 tests now passing)
 - Corrected analyze_table test calls by removing deprecated sample_size parameter
@@ -23,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reorganized test structure by moving server tests to integration folder
 - Improved test coverage to 65% total coverage
 - Enhanced mock configurations for better test reliability
+- Simplified README to focus on quick start, moved details to docs/
+- Updated all version references to 0.5.0
+
+### Removed
+- TESTING.md (content integrated into README)
 
 ## [0.4.7] - 2025-01-07
 

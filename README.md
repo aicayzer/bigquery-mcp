@@ -54,13 +54,39 @@ python src/server.py
 ### Docker Deployment
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up --build
-
-# Or use the Docker image directly
+# Build the Docker image
 docker build -t bigquery-mcp .
-docker run -it bigquery-mcp
+
+# Test the container
+docker run --rm bigquery-mcp python --version
+
+# For development with volume mounts
+docker-compose up --build
 ```
+
+#### Claude MCP Configuration (Docker)
+
+After building the Docker image, add this to your Claude MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "bigquery": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-v", "/path/to/your/bigquery-mcp/config:/app/config:ro",
+        "-v", "/path/to/your/service-account.json:/app/credentials/service-account.json:ro",
+        "-e", "GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account.json",
+        "bigquery-mcp"
+      ],
+      "env": {}
+    }
+  }
+}
+```
+
+Replace `/path/to/your/bigquery-mcp/config` with the absolute path to your config directory and `/path/to/your/service-account.json` with your GCP service account key file.
 
 ## Configuration
 
@@ -97,95 +123,21 @@ BIGQUERY_BILLING_PROJECT=my-project
 LOG_LEVEL=DEBUG
 ```
 
-## MCP Tools
+## Available Tools
 
 ### Discovery Tools
-
-#### list_projects()
-List all configured BigQuery projects with metadata.
-
-```python
-# Returns accessible projects
-{
-  "projects": [
-    {
-      "project_id": "analytics-prod",
-      "project_name": "Analytics Production",
-      "description": "Main data warehouse"
-    }
-  ]
-}
-```
-
-#### list_datasets(project)
-List datasets in a project, filtered by configuration patterns.
-
-```python
-# List datasets in default billing project
-list_datasets()
-
-# List datasets in specific project
-list_datasets(project="analytics-prod")
-```
-
-#### list_tables(dataset_path, table_type)
-List tables with filtering by type.
-
-```python
-# List all tables in dataset
-list_tables("my_dataset")
-
-# List only views
-list_tables("project.dataset", table_type="view")
-```
+- **list_projects()** - List configured BigQuery projects
+- **list_datasets(project)** - List datasets in a project
+- **list_tables(dataset, table_type)** - List tables in a dataset
 
 ### Analysis Tools
-
-#### analyze_table(table_path)
-Get comprehensive table information including schema and column statistics.
-Analyzes the full table schema without sampling.
-
-```python
-# Analyze table with full path
-analyze_table("project.dataset.table")
-
-# Using default project
-analyze_table("dataset.table")
-```
-
-#### analyze_columns(table_path, columns, include_examples, sample_size)
-Perform column-level analysis for data quality insights.
-
-```python
-# Analyze all columns with sampling
-analyze_columns("dataset.table")
-
-# Analyze specific columns
-analyze_columns(
-    "dataset.table",
-    columns=["user_id", "created_at"],
-    include_examples=True,
-    sample_size=10000
-)
-```
+- **analyze_table(table)** - Get table structure and statistics
+- **analyze_columns(table, columns, include_examples, sample_size)** - Deep column analysis
 
 ### Query Execution
+- **execute_query(query, format, max_rows, timeout, dry_run, parameters)** - Execute SELECT queries
 
-#### execute_query(sql, project, limit, format)
-Execute SQL queries with safety validation.
-
-```python
-# Simple query
-execute_query("SELECT * FROM dataset.table")
-
-# With options
-execute_query(
-    sql="SELECT user_id, COUNT(*) FROM dataset.events GROUP BY user_id",
-    project="analytics-prod",
-    limit=100,
-    format="csv"
-)
-```
+For detailed documentation and examples, see [docs/tools.md](docs/tools.md).
 
 ## Claude Desktop Integration
 
@@ -205,9 +157,7 @@ Add to your Claude Desktop configuration:
 }
 ```
 
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
 # Run all tests
@@ -218,54 +168,19 @@ pytest --cov=src tests/
 
 # Run specific test file
 pytest tests/unit/test_discovery.py
-
-# Test server functionality locally
-python tests/test_server_local.py
 ```
 
-### Project Structure
+## Development
 
-- `src/` - Core server implementation
-  - `tools/` - MCP tool implementations
-  - `utils/` - Shared utilities
-- `tests/` - Test suite with fixtures
-  - `unit/` - Unit tests with mocked dependencies
-  - `integration/` - Integration tests with BigQuery
-- `config/` - Configuration files
+For code quality checks and linting, see [Development Guide](docs/development.md).
 
-## Security
+## Documentation
 
-- **Read-Only** - All data modification operations are blocked
-- **Project Allowlist** - Only configured projects are accessible
-- **Dataset Patterns** - Fine-grained dataset access control
-- **Query Validation** - SQL queries are validated for banned operations
-- **Row Limits** - Default 20-row limit, configurable maximum
+- [Architecture & Specification](docs/architecture.md) - System design and security model
+- [Tools Reference](docs/tools.md) - Detailed tool documentation with examples
+- [Development Guide](docs/development.md) - Code quality, linting, and troubleshooting
+- [Contributing Guidelines](CLAUDE.md) - Guidelines for contributors
 
-## Troubleshooting
+## License
 
-### Authentication Issues
-
-```bash
-# Verify credentials
-gcloud auth application-default print-access-token
-
-# Check BigQuery permissions
-bq ls --project_id=your-project
-```
-
-### Connection Errors
-
-1. Verify project IDs in config.yaml
-2. Check dataset patterns match actual dataset names
-3. Ensure billing project has BigQuery API enabled
-
-### Query Failures
-
-- Check for forbidden SQL keywords (CREATE, DROP, etc.)
-- Verify table paths use correct format
-- Ensure you have permissions for the target dataset
-
-## Support
-
-- Documentation: [GitHub Wiki](https://github.com/yourusername/bigquery-mcp/wiki)
-- Issues: [GitHub Issues](https://github.com/yourusername/bigquery-mcp/issues)
+MIT License - see LICENSE file for details.

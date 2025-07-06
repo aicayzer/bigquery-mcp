@@ -26,9 +26,11 @@ def _ensure_initialized():
         )
 
 
-def _build_analyze_query(project: str, dataset: str, table: str, sample_size: int = 1000) -> str:
+def _build_analyze_query(
+    project: str, dataset: str, table: str, sample_size: int = 1000
+) -> str:
     """Build optimized query for table analysis.
-    
+
     Creates a query that efficiently samples data for analysis while
     avoiding full table scans when possible.
     """
@@ -73,94 +75,103 @@ def _build_analyze_query(project: str, dataset: str, table: str, sample_size: in
     """
 
 
-def _classify_column(column_name: str, data_type: str, 
-                    null_ratio: float, cardinality: int, 
-                    sample_size: int) -> Dict[str, Any]:
+def _classify_column(
+    column_name: str,
+    data_type: str,
+    null_ratio: float,
+    cardinality: int,
+    sample_size: int,
+) -> Dict[str, Any]:
     """Classify column based on its characteristics.
-    
+
     Identifies column patterns like IDs, categories, measures, etc.
     """
     classification = {
-        'data_type': data_type,
-        'nullable': null_ratio > 0,
-        'null_ratio': round(null_ratio, 4)
+        "data_type": data_type,
+        "nullable": null_ratio > 0,
+        "null_ratio": round(null_ratio, 4),
     }
-    
+
     # Normalize column name for pattern matching
     name_lower = column_name.lower()
-    
+
     # ID detection
-    if any(pattern in name_lower for pattern in ['_id', 'id_', '_key', 'key_']) or name_lower == 'id':
-        classification['category'] = 'identifier'
-        classification['likely_primary_key'] = null_ratio == 0 and cardinality == sample_size
-    
+    if (
+        any(pattern in name_lower for pattern in ["_id", "id_", "_key", "key_"])
+        or name_lower == "id"
+    ):
+        classification["category"] = "identifier"
+        classification["likely_primary_key"] = (
+            null_ratio == 0 and cardinality == sample_size
+        )
+
     # Date/time detection
-    elif data_type in ['TIMESTAMP', 'DATETIME', 'DATE', 'TIME']:
-        classification['category'] = 'temporal'
-        
+    elif data_type in ["TIMESTAMP", "DATETIME", "DATE", "TIME"]:
+        classification["category"] = "temporal"
+
     # Numeric measure detection
-    elif data_type in ['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC']:
+    elif data_type in ["INT64", "FLOAT64", "NUMERIC", "BIGNUMERIC"]:
         if cardinality < 10:
-            classification['category'] = 'categorical_numeric'
+            classification["category"] = "categorical_numeric"
         else:
-            classification['category'] = 'measure'
-            
+            classification["category"] = "measure"
+
     # String classification
-    elif data_type == 'STRING':
+    elif data_type == "STRING":
         uniqueness_ratio = cardinality / sample_size if sample_size > 0 else 0
-        
+
         if uniqueness_ratio > 0.95:
-            classification['category'] = 'high_cardinality_string'
+            classification["category"] = "high_cardinality_string"
         elif cardinality < 50:
-            classification['category'] = 'categorical'
+            classification["category"] = "categorical"
         else:
-            classification['category'] = 'descriptive'
-            
+            classification["category"] = "descriptive"
+
     # Boolean
-    elif data_type == 'BOOL':
-        classification['category'] = 'boolean'
-        
+    elif data_type == "BOOL":
+        classification["category"] = "boolean"
+
     # Complex types
-    elif data_type in ['STRUCT', 'ARRAY', 'JSON']:
-        classification['category'] = 'complex'
-        
+    elif data_type in ["STRUCT", "ARRAY", "JSON"]:
+        classification["category"] = "complex"
+
     else:
-        classification['category'] = 'other'
-    
+        classification["category"] = "other"
+
     # Add cardinality classification
     if cardinality == 1:
-        classification['cardinality_type'] = 'constant'
+        classification["cardinality_type"] = "constant"
     elif cardinality == 2:
-        classification['cardinality_type'] = 'binary'
+        classification["cardinality_type"] = "binary"
     elif cardinality < 10:
-        classification['cardinality_type'] = 'low'
+        classification["cardinality_type"] = "low"
     elif cardinality < 100:
-        classification['cardinality_type'] = 'medium'
+        classification["cardinality_type"] = "medium"
     else:
-        classification['cardinality_type'] = 'high'
-    
+        classification["cardinality_type"] = "high"
+
     return classification
 
 
 def analyze_table(table: str) -> Dict[str, Any]:
     """Analyze table structure and statistics.
-    
+
     Provides comprehensive table analysis including row counts, data types,
     null statistics, and cardinality information for each column.
     Analyzes the full table schema without sampling.
-    
+
     Args:
         table: Full table path as 'project.dataset.table' or 'dataset.table'
-        
+
     Returns:
         Dictionary containing table analysis results
     """
     _ensure_initialized()
     logger.info(f"Analyzing table: {table}")
-    
+
     try:
         # Parse table path
-        parts = table.split('.')
+        parts = table.split(".")
         if len(parts) == 3:
             project, dataset, table_id = parts
         elif len(parts) == 2:
@@ -170,16 +181,16 @@ def analyze_table(table: str) -> Dict[str, Any]:
             raise ValueError(
                 "Invalid table path. Use 'project.dataset.table' or 'dataset.table'"
             )
-        
+
         # Validate access
         if not config.is_dataset_allowed(project, dataset):
             raise DatasetAccessError(
                 f"Dataset '{dataset}' in project '{project}' is not accessible"
             )
-        
+
         # Get table metadata
         table_ref = bq_client.client.get_table(f"{project}.{dataset}.{table_id}")
-        
+
         # Get sample data for analysis (internal use only)
         # Use a reasonable sample size for column statistics
         internal_sample_size = 1000
@@ -188,116 +199,127 @@ def analyze_table(table: str) -> Dict[str, Any]:
         FROM `{project}.{dataset}.{table_id}`
         LIMIT {internal_sample_size}
         """
-        
+
         # Run sample query
         query_job = bq_client.client.query(
-            sample_query,
-            job_config=QueryJobConfig(use_query_cache=True)
+            sample_query, job_config=QueryJobConfig(use_query_cache=True)
         )
         sample_results = list(query_job.result())
         actual_sample_size = len(sample_results)
-        
+
         # Analyze columns
         columns_analysis = []
-        
+
         for field in table_ref.schema:
             # Calculate statistics for this column
             null_count = sum(1 for row in sample_results if row[field.name] is None)
-            non_null_values = [row[field.name] for row in sample_results if row[field.name] is not None]
+            non_null_values = [
+                row[field.name] for row in sample_results if row[field.name] is not None
+            ]
             distinct_count = len(set(str(v) for v in non_null_values))
-            
-            null_ratio = null_count / actual_sample_size if actual_sample_size > 0 else 0
-            
+
+            null_ratio = (
+                null_count / actual_sample_size if actual_sample_size > 0 else 0
+            )
+
             # Classify column
             classification = _classify_column(
                 field.name,
                 field.field_type,
                 null_ratio,
                 distinct_count,
-                actual_sample_size
+                actual_sample_size,
             )
-            
+
             column_info = {
-                'name': field.name,
-                'type': field.field_type,
-                'description': field.description or '',
-                'null_count': null_count,
-                'distinct_count': distinct_count
+                "name": field.name,
+                "type": field.field_type,
+                "description": field.description or "",
+                "null_count": null_count,
+                "distinct_count": distinct_count,
             }
-            
+
             columns_analysis.append(column_info)
-        
+
         # Build response
         if formatter.compact_mode:
             # Compact format focuses on key information
             response = {
-                'status': 'success',
-                'table': f"{project}.{dataset}.{table_id}",
-                'total_rows': table_ref.num_rows,
-                'size_mb': round((table_ref.num_bytes or 0) / (1024 * 1024), 2),
-                'columns': [
+                "status": "success",
+                "table": f"{project}.{dataset}.{table_id}",
+                "total_rows": table_ref.num_rows,
+                "size_mb": round((table_ref.num_bytes or 0) / (1024 * 1024), 2),
+                "columns": [
                     {
-                        'name': col['name'],
-                        'type': col['type'],
-                        'nulls': col['null_count'],
-                        'distinct': col['distinct_count']
+                        "name": col["name"],
+                        "type": col["type"],
+                        "nulls": col["null_count"],
+                        "distinct": col["distinct_count"],
                     }
                     for col in columns_analysis
-                ]
+                ],
             }
-            
+
             # Add partitioning info if present
             if table_ref.time_partitioning:
-                response['partitioned_by'] = table_ref.time_partitioning.field or '_PARTITIONTIME'
-                
+                response["partitioned_by"] = (
+                    table_ref.time_partitioning.field or "_PARTITIONTIME"
+                )
+
         else:
             # Full format with comprehensive details
             response = {
-                'status': 'success',
-                'table': {
-                    'project': project,
-                    'dataset': dataset,
-                    'table_id': table_id,
-                    'full_path': f"{project}.{dataset}.{table_id}"
+                "status": "success",
+                "table": {
+                    "project": project,
+                    "dataset": dataset,
+                    "table_id": table_id,
+                    "full_path": f"{project}.{dataset}.{table_id}",
                 },
-                'metadata': {
-                    'created': table_ref.created.isoformat() if table_ref.created else None,
-                    'modified': table_ref.modified.isoformat() if table_ref.modified else None,
-                    'description': table_ref.description or '',
-                    'labels': table_ref.labels or {},
-                    'location': table_ref.location
+                "metadata": {
+                    "created": (
+                        table_ref.created.isoformat() if table_ref.created else None
+                    ),
+                    "modified": (
+                        table_ref.modified.isoformat() if table_ref.modified else None
+                    ),
+                    "description": table_ref.description or "",
+                    "labels": table_ref.labels or {},
+                    "location": table_ref.location,
                 },
-                'statistics': {
-                    'total_rows': table_ref.num_rows,
-                    'total_bytes': table_ref.num_bytes,
-                    'size_mb': round((table_ref.num_bytes or 0) / (1024 * 1024), 2),
-                    'size_gb': round((table_ref.num_bytes or 0) / (1024 * 1024 * 1024), 2)
+                "statistics": {
+                    "total_rows": table_ref.num_rows,
+                    "total_bytes": table_ref.num_bytes,
+                    "size_mb": round((table_ref.num_bytes or 0) / (1024 * 1024), 2),
+                    "size_gb": round(
+                        (table_ref.num_bytes or 0) / (1024 * 1024 * 1024), 2
+                    ),
                 },
-                'structure': {
-                    'column_count': len(table_ref.schema),
-                    'has_partitioning': table_ref.time_partitioning is not None,
-                    'has_clustering': bool(table_ref.clustering_fields),
-                    'table_type': table_ref.table_type
+                "structure": {
+                    "column_count": len(table_ref.schema),
+                    "has_partitioning": table_ref.time_partitioning is not None,
+                    "has_clustering": bool(table_ref.clustering_fields),
+                    "table_type": table_ref.table_type,
                 },
-                'columns': columns_analysis
+                "columns": columns_analysis,
             }
-            
+
             # Add partitioning details if present
             if table_ref.time_partitioning:
-                response['structure']['partitioning'] = {
-                    'type': table_ref.time_partitioning.type_,
-                    'field': table_ref.time_partitioning.field,
-                    'require_partition_filter': table_ref.require_partition_filter
+                response["structure"]["partitioning"] = {
+                    "type": table_ref.time_partitioning.type_,
+                    "field": table_ref.time_partitioning.field,
+                    "require_partition_filter": table_ref.require_partition_filter,
                 }
-            
+
             # Add clustering details if present
             if table_ref.clustering_fields:
-                response['structure']['clustering'] = {
-                    'fields': table_ref.clustering_fields
+                response["structure"]["clustering"] = {
+                    "fields": table_ref.clustering_fields
                 }
-        
+
         return response
-        
+
     except Exception as e:
         if "404" in str(e):
             raise DatasetAccessError(
@@ -311,32 +333,32 @@ def analyze_columns(
     table: str,
     columns: str = "",
     include_examples: bool = True,
-    sample_size: int = 10000
+    sample_size: int = 10000,
 ) -> Dict[str, Any]:
     """Deep analysis of specific columns with statistical profiling.
-    
+
     Provides detailed statistical analysis of columns including:
     - Null analysis and patterns
     - Cardinality and uniqueness
     - Value distribution for categorical data
     - Statistical measures for numeric data
     - Data quality indicators
-    
+
     Args:
         table: Full table path as 'project.dataset.table' or 'dataset.table'
         columns: Comma-separated list of column names to analyze (empty = all columns)
         include_examples: Include example values in response
         sample_size: Number of rows to sample for analysis
-        
+
     Returns:
         Dictionary containing detailed column analysis
     """
     _ensure_initialized()
     logger.info(f"Analyzing columns in table: {table}")
-    
+
     try:
         # Parse table path
-        parts = table.split('.')
+        parts = table.split(".")
         if len(parts) == 3:
             project, dataset, table_id = parts
         elif len(parts) == 2:
@@ -346,24 +368,28 @@ def analyze_columns(
             raise ValueError(
                 "Invalid table path. Use 'project.dataset.table' or 'dataset.table'"
             )
-        
+
         # Validate access
         if not config.is_dataset_allowed(project, dataset):
             raise DatasetAccessError(
                 f"Dataset '{dataset}' in project '{project}' is not accessible"
             )
-        
+
         # Get table metadata
         table_ref = bq_client.client.get_table(f"{project}.{dataset}.{table_id}")
-        
+
         # Determine columns to analyze
         if columns:
             # Parse comma-separated column names
-            columns_to_analyze = [col.strip() for col in columns.split(',') if col.strip()]
-            
+            columns_to_analyze = [
+                col.strip() for col in columns.split(",") if col.strip()
+            ]
+
             # Validate requested columns exist
             schema_fields = {field.name: field for field in table_ref.schema}
-            invalid_columns = [col for col in columns_to_analyze if col not in schema_fields]
+            invalid_columns = [
+                col for col in columns_to_analyze if col not in schema_fields
+            ]
             if invalid_columns:
                 raise ValueError(
                     f"Columns not found in table: {', '.join(invalid_columns)}"
@@ -371,23 +397,23 @@ def analyze_columns(
         else:
             # Analyze all columns
             columns_to_analyze = [field.name for field in table_ref.schema]
-            
+
         # Build analysis query
         column_analyses = []
-        
+
         # For each column, build appropriate analysis
         for col_name in columns_to_analyze:
             field = next(f for f in table_ref.schema if f.name == col_name)
-            
+
             # Calculate sample size based on table size
             # Use RAND() for more reliable sampling
             if table_ref.num_rows and table_ref.num_rows > 0:
                 sample_ratio = min(1.0, (sample_size * 1.5) / table_ref.num_rows)
             else:
                 sample_ratio = 0.1  # Default to 10% if row count unknown
-            
+
             # Build column-specific analysis query
-            if field.field_type in ['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC']:
+            if field.field_type in ["INT64", "FLOAT64", "NUMERIC", "BIGNUMERIC"]:
                 # Numeric analysis
                 analysis_query = f"""
                 WITH sample_data AS (
@@ -408,8 +434,8 @@ def analyze_columns(
                     APPROX_QUANTILES({col_name}, 4) as quartiles
                 FROM sample_data
                 """
-            
-            elif field.field_type == 'STRING':
+
+            elif field.field_type == "STRING":
                 # String analysis - simplified query without problematic JOIN
                 analysis_query = f"""
                 WITH sample_data AS (
@@ -444,8 +470,8 @@ def analyze_columns(
                     ARRAY(SELECT AS STRUCT value, count FROM value_counts) as top_values
                 FROM basic_stats
                 """
-            
-            elif field.field_type in ['DATE', 'DATETIME', 'TIMESTAMP']:
+
+            elif field.field_type in ["DATE", "DATETIME", "TIMESTAMP"]:
                 # Temporal analysis
                 analysis_query = f"""
                 WITH sample_data AS (
@@ -464,7 +490,7 @@ def analyze_columns(
                     DATE_DIFF(MAX({col_name}), MIN({col_name}), DAY) as range_days
                 FROM sample_data
                 """
-            
+
             else:
                 # Generic analysis for other types
                 analysis_query = f"""
@@ -481,140 +507,209 @@ def analyze_columns(
                     COUNT(DISTINCT TO_JSON_STRING({col_name})) as distinct_count
                 FROM sample_data
                 """
-            
+
             # Run analysis query
             try:
                 query_job = bq_client.client.query(
-                    analysis_query,
-                    job_config=QueryJobConfig(use_query_cache=True)
+                    analysis_query, job_config=QueryJobConfig(use_query_cache=True)
                 )
                 results = list(query_job.result())[0]
-                
+
                 # Build column analysis
                 total_count = results.total_count or 0
                 null_count = results.null_count or 0
                 distinct_count = results.distinct_count or 0
                 null_ratio = null_count / total_count if total_count > 0 else 0
-                
+
                 col_analysis = {
-                    'column_name': col_name,
-                    'data_type': field.field_type,
-                    'mode': field.mode,
-                    'description': field.description or '',
-                    'total_rows_analyzed': total_count,
-                    'null_analysis': {
-                        'null_count': null_count,
-                        'non_null_count': total_count - null_count,
-                        'null_percentage': round(null_ratio * 100, 2),
-                        'is_nullable': field.mode != 'REQUIRED'
+                    "column_name": col_name,
+                    "data_type": field.field_type,
+                    "mode": field.mode,
+                    "description": field.description or "",
+                    "total_rows_analyzed": total_count,
+                    "null_analysis": {
+                        "null_count": null_count,
+                        "non_null_count": total_count - null_count,
+                        "null_percentage": round(null_ratio * 100, 2),
+                        "is_nullable": field.mode != "REQUIRED",
                     },
-                    'cardinality': {
-                        'distinct_count': distinct_count,
-                        'distinct_percentage': round((distinct_count / total_count * 100) if total_count > 0 else 0, 2),
-                        'is_unique': distinct_count == total_count and total_count > 0,
-                        'has_duplicates': distinct_count < total_count
-                    }
+                    "cardinality": {
+                        "distinct_count": distinct_count,
+                        "distinct_percentage": round(
+                            (
+                                (distinct_count / total_count * 100)
+                                if total_count > 0
+                                else 0
+                            ),
+                            2,
+                        ),
+                        "is_unique": distinct_count == total_count and total_count > 0,
+                        "has_duplicates": distinct_count < total_count,
+                    },
                 }
-                
+
                 # Add type-specific analysis
-                if field.field_type in ['INT64', 'FLOAT64', 'NUMERIC', 'BIGNUMERIC']:
-                    col_analysis['numeric_stats'] = {
-                        'min': float(results.min_value) if results.min_value is not None else None,
-                        'max': float(results.max_value) if results.max_value is not None else None,
-                        'avg': float(results.avg_value) if results.avg_value is not None else None,
-                        'stddev': float(results.stddev_value) if results.stddev_value is not None else None
+                if field.field_type in ["INT64", "FLOAT64", "NUMERIC", "BIGNUMERIC"]:
+                    col_analysis["numeric_stats"] = {
+                        "min": (
+                            float(results.min_value)
+                            if results.min_value is not None
+                            else None
+                        ),
+                        "max": (
+                            float(results.max_value)
+                            if results.max_value is not None
+                            else None
+                        ),
+                        "avg": (
+                            float(results.avg_value)
+                            if results.avg_value is not None
+                            else None
+                        ),
+                        "stddev": (
+                            float(results.stddev_value)
+                            if results.stddev_value is not None
+                            else None
+                        ),
                     }
-                    
-                    if hasattr(results, 'quartiles') and results.quartiles:
-                        col_analysis['numeric_stats']['quartiles'] = {
-                            'q0_min': float(results.quartiles[0]) if results.quartiles[0] is not None else None,
-                            'q1': float(results.quartiles[1]) if results.quartiles[1] is not None else None,
-                            'q2_median': float(results.quartiles[2]) if results.quartiles[2] is not None else None,
-                            'q3': float(results.quartiles[3]) if results.quartiles[3] is not None else None,
-                            'q4_max': float(results.quartiles[4]) if results.quartiles[4] is not None else None
+
+                    if hasattr(results, "quartiles") and results.quartiles:
+                        col_analysis["numeric_stats"]["quartiles"] = {
+                            "q0_min": (
+                                float(results.quartiles[0])
+                                if results.quartiles[0] is not None
+                                else None
+                            ),
+                            "q1": (
+                                float(results.quartiles[1])
+                                if results.quartiles[1] is not None
+                                else None
+                            ),
+                            "q2_median": (
+                                float(results.quartiles[2])
+                                if results.quartiles[2] is not None
+                                else None
+                            ),
+                            "q3": (
+                                float(results.quartiles[3])
+                                if results.quartiles[3] is not None
+                                else None
+                            ),
+                            "q4_max": (
+                                float(results.quartiles[4])
+                                if results.quartiles[4] is not None
+                                else None
+                            ),
                         }
-                
-                elif field.field_type == 'STRING':
-                    col_analysis['string_stats'] = {
-                        'min_length': results.min_length,
-                        'max_length': results.max_length,
-                        'avg_length': round(results.avg_length, 2) if results.avg_length else 0
+
+                elif field.field_type == "STRING":
+                    col_analysis["string_stats"] = {
+                        "min_length": results.min_length,
+                        "max_length": results.max_length,
+                        "avg_length": (
+                            round(results.avg_length, 2) if results.avg_length else 0
+                        ),
                     }
-                    
-                    if hasattr(results, 'top_values') and results.top_values and include_examples:
-                        col_analysis['top_values'] = [
-                            {'value': item.value, 'count': item.count, 
-                             'percentage': round(item.count / total_count * 100, 2)}
-                            for item in results.top_values if item.value is not None
-                        ][:10]  # Limit to top 10
-                
-                elif field.field_type in ['DATE', 'DATETIME', 'TIMESTAMP']:
-                    col_analysis['temporal_stats'] = {
-                        'min_value': str(results.min_value) if results.min_value else None,
-                        'max_value': str(results.max_value) if results.max_value else None,
-                        'range_days': results.range_days if hasattr(results, 'range_days') else None
+
+                    if (
+                        hasattr(results, "top_values")
+                        and results.top_values
+                        and include_examples
+                    ):
+                        col_analysis["top_values"] = [
+                            {
+                                "value": item.value,
+                                "count": item.count,
+                                "percentage": round(item.count / total_count * 100, 2),
+                            }
+                            for item in results.top_values
+                            if item.value is not None
+                        ][
+                            :10
+                        ]  # Limit to top 10
+
+                elif field.field_type in ["DATE", "DATETIME", "TIMESTAMP"]:
+                    col_analysis["temporal_stats"] = {
+                        "min_value": (
+                            str(results.min_value) if results.min_value else None
+                        ),
+                        "max_value": (
+                            str(results.max_value) if results.max_value else None
+                        ),
+                        "range_days": (
+                            results.range_days
+                            if hasattr(results, "range_days")
+                            else None
+                        ),
                     }
-                
+
                 # Add classification
-                col_analysis['classification'] = _classify_column(
-                    col_name,
-                    field.field_type,
-                    null_ratio,
-                    distinct_count,
-                    total_count
+                col_analysis["classification"] = _classify_column(
+                    col_name, field.field_type, null_ratio, distinct_count, total_count
                 )
-                
+
                 # Add data quality indicators
-                col_analysis['data_quality'] = {
-                    'completeness': round((1 - null_ratio) * 100, 2),
-                    'uniqueness': round((distinct_count / total_count * 100) if total_count > 0 else 0, 2),
-                    'has_nulls': null_count > 0,
-                    'has_empty_strings': False  # Could be enhanced with additional query
+                col_analysis["data_quality"] = {
+                    "completeness": round((1 - null_ratio) * 100, 2),
+                    "uniqueness": round(
+                        (distinct_count / total_count * 100) if total_count > 0 else 0,
+                        2,
+                    ),
+                    "has_nulls": null_count > 0,
+                    "has_empty_strings": False,  # Could be enhanced with additional query
                 }
-                
+
                 column_analyses.append(col_analysis)
-                
+
             except Exception as e:
                 logger.warning(f"Failed to analyze column {col_name}: {e}")
-                column_analyses.append({
-                    'column_name': col_name,
-                    'data_type': field.field_type,
-                    'error': str(e)
-                })
-        
+                column_analyses.append(
+                    {
+                        "column_name": col_name,
+                        "data_type": field.field_type,
+                        "error": str(e),
+                    }
+                )
+
         # Build response
         response = {
-            'status': 'success',
-            'table': f"{project}.{dataset}.{table_id}",
-            'columns_analyzed': len(column_analyses),
-            'sample_size': sample_size,
-            'analysis_method': 'RANDOM_SAMPLING' if table_ref.num_rows > sample_size else 'FULL_SCAN',
-            'columns': column_analyses
+            "status": "success",
+            "table": f"{project}.{dataset}.{table_id}",
+            "columns_analyzed": len(column_analyses),
+            "sample_size": sample_size,
+            "analysis_method": (
+                "RANDOM_SAMPLING" if table_ref.num_rows > sample_size else "FULL_SCAN"
+            ),
+            "columns": column_analyses,
         }
-        
+
         # Add summary statistics in non-compact mode
         if not formatter.compact_mode:
-            response['summary'] = {
-                'high_null_columns': [
-                    col['column_name'] for col in column_analyses
-                    if col.get('null_analysis', {}).get('null_percentage', 0) > 50
+            response["summary"] = {
+                "high_null_columns": [
+                    col["column_name"]
+                    for col in column_analyses
+                    if col.get("null_analysis", {}).get("null_percentage", 0) > 50
                 ],
-                'unique_columns': [
-                    col['column_name'] for col in column_analyses
-                    if col.get('cardinality', {}).get('is_unique', False)
+                "unique_columns": [
+                    col["column_name"]
+                    for col in column_analyses
+                    if col.get("cardinality", {}).get("is_unique", False)
                 ],
-                'constant_columns': [
-                    col['column_name'] for col in column_analyses
-                    if col.get('cardinality', {}).get('distinct_count', 0) == 1
+                "constant_columns": [
+                    col["column_name"]
+                    for col in column_analyses
+                    if col.get("cardinality", {}).get("distinct_count", 0) == 1
                 ],
-                'high_cardinality_columns': [
-                    col['column_name'] for col in column_analyses
-                    if col.get('cardinality', {}).get('distinct_percentage', 0) > 90
-                ]
+                "high_cardinality_columns": [
+                    col["column_name"]
+                    for col in column_analyses
+                    if col.get("cardinality", {}).get("distinct_percentage", 0) > 90
+                ],
             }
-        
+
         return response
-        
+
     except Exception as e:
         if "404" in str(e):
             raise DatasetAccessError(
@@ -624,21 +719,23 @@ def analyze_columns(
         raise
 
 
-def register_analysis_tools(mcp_server, error_handler, bigquery_client, configuration, response_formatter):
+def register_analysis_tools(
+    mcp_server, error_handler, bigquery_client, configuration, response_formatter
+):
     """Register analysis tools with the MCP server.
-    
+
     This function is called by server.py to inject dependencies and register tools.
     """
     global mcp, handle_error, bq_client, config, formatter
-    
+
     mcp = mcp_server
     handle_error = error_handler
-    bq_client = bigquery_client  
+    bq_client = bigquery_client
     config = configuration
     formatter = response_formatter
-    
+
     # Register tools with MCP - let FastMCP handle protocol translation
     mcp.tool()(handle_error(analyze_table))
     mcp.tool()(handle_error(analyze_columns))
-    
+
     logger.info("Analysis tools registered successfully")
