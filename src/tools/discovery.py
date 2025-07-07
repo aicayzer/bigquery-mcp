@@ -1,9 +1,9 @@
 """Discovery tools for listing projects, datasets, and tables."""
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, Optional
 
-from utils.errors import ProjectAccessError, DatasetAccessError
+from utils.errors import DatasetAccessError, ProjectAccessError
 
 logger = logging.getLogger(__name__)
 
@@ -109,14 +109,10 @@ def list_datasets(project: Optional[str] = None) -> Dict[str, Any]:
                     dataset_info.update(
                         {
                             "created": (
-                                dataset_ref.created.isoformat()
-                                if dataset_ref.created
-                                else None
+                                dataset_ref.created.isoformat() if dataset_ref.created else None
                             ),
                             "modified": (
-                                dataset_ref.modified.isoformat()
-                                if dataset_ref.modified
-                                else None
+                                dataset_ref.modified.isoformat() if dataset_ref.modified else None
                             ),
                             "description": dataset_ref.description or "",
                             "labels": dataset_ref.labels or {},
@@ -130,9 +126,7 @@ def list_datasets(project: Optional[str] = None) -> Dict[str, Any]:
                 datasets.append(dataset_info)
 
             except Exception as e:
-                logger.warning(
-                    f"Failed to get details for dataset {dataset_item.dataset_id}: {e}"
-                )
+                logger.warning(f"Failed to get details for dataset {dataset_item.dataset_id}: {e}")
                 filtered_count += 1
 
         logger.info(f"Found {len(datasets)} accessible datasets in {target_project}")
@@ -140,18 +134,14 @@ def list_datasets(project: Optional[str] = None) -> Dict[str, Any]:
         response = {
             "status": "success",
             "project": target_project,
-            "project_name": (
-                project_config.project_name if project_config else target_project
-            ),
+            "project_name": (project_config.project_name if project_config else target_project),
             "datasets": datasets,
             "total_datasets": len(datasets),
         }
 
         if filtered_count > 0:
             response["filtered_count"] = filtered_count
-            response["note"] = (
-                f"{filtered_count} datasets were filtered due to access restrictions"
-            )
+            response["note"] = f"{filtered_count} datasets were filtered due to access restrictions"
 
         return response
 
@@ -184,8 +174,7 @@ def list_tables(dataset: str, table_type: Optional[str] = "all") -> Dict[str, An
     valid_types = ["all", "table", "view", "materialized_view"]
     if table_type.lower() not in valid_types:
         raise ValueError(
-            f"Invalid table_type '{table_type}'. "
-            f"Must be one of: {', '.join(valid_types)}"
+            f"Invalid table_type '{table_type}'. Must be one of: {', '.join(valid_types)}"
         )
 
     # Parse dataset path and get tables
@@ -202,9 +191,7 @@ def list_tables(dataset: str, table_type: Optional[str] = "all") -> Dict[str, An
             )
 
         # Get tables from BigQuery
-        all_tables = bq_client.list_tables(
-            dataset, table_type if table_type != "all" else None
-        )
+        all_tables = bq_client.list_tables(dataset, table_type if table_type != "all" else None)
 
         tables = []
         for table_item in all_tables:
@@ -229,22 +216,16 @@ def list_tables(dataset: str, table_type: Optional[str] = "all") -> Dict[str, An
                     table_info = {
                         "table_id": table_ref.table_id,
                         "table_type": table_ref.table_type,
-                        "created": (
-                            table_ref.created.isoformat() if table_ref.created else None
-                        ),
+                        "created": (table_ref.created.isoformat() if table_ref.created else None),
                         "modified": (
-                            table_ref.modified.isoformat()
-                            if table_ref.modified
-                            else None
+                            table_ref.modified.isoformat() if table_ref.modified else None
                         ),
                         "num_rows": table_ref.num_rows or 0,
                         "size_bytes": table_ref.num_bytes or 0,
                         "size_mb": round((table_ref.num_bytes or 0) / (1024 * 1024), 2),
                         "description": table_ref.description or "",
                         "location": table_ref.location,
-                        "schema_field_count": (
-                            len(table_ref.schema) if table_ref.schema else 0
-                        ),
+                        "schema_field_count": (len(table_ref.schema) if table_ref.schema else 0),
                     }
 
                     # Add partition info if present
@@ -261,17 +242,12 @@ def list_tables(dataset: str, table_type: Optional[str] = "all") -> Dict[str, An
                 tables.append(table_info)
 
             except Exception as e:
-                logger.warning(
-                    f"Failed to get metadata for table {table_item.table_id}: {e}"
-                )
+                logger.warning(f"Failed to get metadata for table {table_item.table_id}: {e}")
 
         # Sort tables by name for consistency
         tables.sort(key=lambda t: t.get("table_id", ""))
 
-        logger.info(
-            f"Found {len(tables)} tables of type '{table_type}' "
-            f"in {project}.{dataset_id}"
-        )
+        logger.info(f"Found {len(tables)} tables of type '{table_type}' in {project}.{dataset_id}")
 
         response = {
             "status": "success",

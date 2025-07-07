@@ -69,7 +69,7 @@ This design ensures tools cannot be called without proper initialization, enforc
 ```yaml
 server:
   name: "BigQuery MCP Server"
-  version: "0.5.0"
+  version: "1.0.0"
 
 bigquery:
   billing_project: "my-billing-project"
@@ -164,7 +164,7 @@ The SQL validator ensures:
 
 Compact mode reduces response size by:
 - Omitting null/empty fields
-- Simplifying nested structures  
+- Simplifying nested structures
 - Abbreviating field names
 - Removing redundant metadata
 

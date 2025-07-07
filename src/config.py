@@ -1,11 +1,12 @@
 """Configuration management for BigQuery MCP Server."""
 
-import os
-import yaml
 import logging
-from pathlib import Path
-from typing import Dict, Any, List, Optional
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -173,12 +174,8 @@ class Config:
         formatting_dict = self._raw_config.get("formatting", {})
         self.formatting = FormattingConfig(
             compact_format=formatting_dict.get("compact_format", False),
-            include_schema_descriptions=formatting_dict.get(
-                "include_schema_descriptions", True
-            ),
-            abbreviate_common_terms=formatting_dict.get(
-                "abbreviate_common_terms", False
-            ),
+            include_schema_descriptions=formatting_dict.get("include_schema_descriptions", True),
+            abbreviate_common_terms=formatting_dict.get("abbreviate_common_terms", False),
         )
 
         # Logging
@@ -207,9 +204,7 @@ class Config:
         # Compact format
         if env_compact := os.getenv("COMPACT_FORMAT"):
             self.formatting.compact_format = env_compact.lower() == "true"
-            logger.info(
-                f"Overriding compact format from env: {self.formatting.compact_format}"
-            )
+            logger.info(f"Overriding compact format from env: {self.formatting.compact_format}")
 
         # Log level is handled by logging setup, not here
 

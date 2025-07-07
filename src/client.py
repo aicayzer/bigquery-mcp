@@ -1,19 +1,20 @@
 """BigQuery client wrapper for cross-project access."""
 
 import logging
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
+
+from google.auth import default
 from google.cloud import bigquery
 from google.cloud.bigquery.dataset import DatasetListItem
 from google.cloud.bigquery.table import TableListItem
-from google.auth import default
 from google.oauth2 import service_account
 
 from config import get_config
 from utils.errors import (
     AuthenticationError,
-    ProjectAccessError,
     DatasetAccessError,
     InvalidTablePathError,
+    ProjectAccessError,
     TableNotFoundError,
 )
 
@@ -34,9 +35,7 @@ class BigQueryClient:
         try:
             if self.config.service_account_path:
                 # Use service account if specified
-                logger.info(
-                    f"Using service account: {self.config.service_account_path}"
-                )
+                logger.info(f"Using service account: {self.config.service_account_path}")
                 credentials = service_account.Credentials.from_service_account_file(
                     self.config.service_account_path,
                     scopes=["https://www.googleapis.com/auth/bigquery.readonly"],
@@ -64,9 +63,7 @@ class BigQueryClient:
                     location=self.config.location,
                 )
 
-            logger.info(
-                f"BigQuery client initialized with billing project: {self._client.project}"
-            )
+            logger.info(f"BigQuery client initialized with billing project: {self._client.project}")
 
         except Exception as e:
             logger.error(f"Failed to initialize BigQuery client: {e}")
@@ -118,8 +115,7 @@ class BigQueryClient:
         if not self.config.is_project_allowed(project):
             allowed = ", ".join(self.config.get_allowed_projects())
             raise ProjectAccessError(
-                f"Project '{project}' not in allowed list. "
-                f"Allowed projects: {allowed}"
+                f"Project '{project}' not in allowed list. Allowed projects: {allowed}"
             )
 
         # Validate dataset access
@@ -153,8 +149,7 @@ class BigQueryClient:
             return parts[0], parts[1]
         else:
             raise InvalidTablePathError(
-                f"Invalid dataset path: '{dataset_path}'. "
-                "Expected 'dataset' or 'project.dataset'"
+                f"Invalid dataset path: '{dataset_path}'. Expected 'dataset' or 'project.dataset'"
             )
 
     def get_table(self, table_path: str) -> bigquery.Table:
@@ -227,9 +222,7 @@ class BigQueryClient:
             raise ProjectAccessError(f"Project '{project}' not in allowed list")
 
         if not self.config.is_dataset_allowed(project, dataset):
-            raise DatasetAccessError(
-                f"Dataset '{dataset}' not allowed in project '{project}'"
-            )
+            raise DatasetAccessError(f"Dataset '{dataset}' not allowed in project '{project}'")
 
         dataset_ref = self.client.dataset(dataset, project=project)
         all_tables = list(self.client.list_tables(dataset_ref))
@@ -269,10 +262,7 @@ class BigQueryClient:
         if max_results:
             job_config.max_results = max_results
 
-        # Use timeout from parameter or config
-        query_timeout = timeout or self.config.limits.max_query_timeout
-
-        # Note: timeout is not used here - it should be used when calling result()
+        # Note: timeout parameter is passed to result() method, not query() method
         return self.client.query(sql, project=target_project, job_config=job_config)
 
     def get_table_schema(self, table_path: str) -> List[Dict[str, Any]]:

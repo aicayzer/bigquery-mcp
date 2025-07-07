@@ -1,15 +1,14 @@
 """Integration tests for BigQuery operations with mocked client."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
 import os
 import sys
+from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Add src to path
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src"))
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
 
 
 class TestDiscoveryIntegration:
@@ -190,9 +189,7 @@ class TestDiscoveryIntegration:
 
     def test_full_discovery_workflow(self, mock_config, mock_bigquery_integration):
         """Test complete discovery workflow from projects to tables."""
-        pytest.skip(
-            "Integration tests require full server initialization - skipping for now"
-        )
+        pytest.skip("Integration tests require full server initialization - skipping for now")
         with patch("config.get_config", return_value=mock_config):
             with patch("client.BigQueryClient") as mock_bq_class:
                 # Configure BigQuery client mock
@@ -221,7 +218,7 @@ class TestDiscoveryIntegration:
 
                 server.initialize_server()
 
-                from tools.discovery import list_projects, list_datasets, list_tables
+                from tools.discovery import list_datasets, list_projects, list_tables
 
                 # Step 1: List projects
                 projects_result = list_projects()
@@ -252,18 +249,14 @@ class TestDiscoveryIntegration:
                 assert "VIEW" in table_types
 
                 # Step 4: Filter tables by type
-                views_result = list_tables(
-                    "analytics-test.prod_sales", table_type="view"
-                )
+                views_result = list_tables("analytics-test.prod_sales", table_type="view")
                 assert views_result["status"] == "success"
                 assert views_result["filtered_by_type"] == "VIEW"
                 assert all(t["table_type"] == "VIEW" for t in views_result["tables"])
 
     def test_compact_mode_integration(self, mock_config, mock_bigquery_integration):
         """Test discovery tools in compact mode."""
-        pytest.skip(
-            "Integration tests require full server initialization - skipping for now"
-        )
+        pytest.skip("Integration tests require full server initialization - skipping for now")
 
         with patch("config.get_config", return_value=mock_config):
             with patch("client.BigQueryClient") as mock_bq_class:
@@ -279,7 +272,7 @@ class TestDiscoveryIntegration:
 
                 server.initialize_server()
 
-                from tools.discovery import list_projects, list_datasets
+                from tools.discovery import list_datasets, list_projects
 
                 # Test compact project listing
                 projects_result = list_projects()
@@ -296,6 +289,4 @@ class TestDiscoveryIntegration:
 
     def test_error_handling_integration(self, mock_config):
         """Test error handling across discovery tools."""
-        pytest.skip(
-            "Integration tests require full server initialization - skipping for now"
-        )
+        pytest.skip("Integration tests require full server initialization - skipping for now")

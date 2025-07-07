@@ -1,14 +1,15 @@
 # BigQuery MCP Server
 
-A Model Context Protocol server that provides secure, cross-project access to BigQuery datasets. Built with FastMCP for Python, enabling LLMs to explore data, analyze schemas, and execute queries across multiple Google Cloud projects.
+A production-ready Model Context Protocol server that provides secure, cross-project access to BigQuery datasets. Built with FastMCP for Python, enabling LLMs to explore data, analyze schemas, and execute queries across multiple Google Cloud projects.
 
 ## Key Features
 
 - **Cross-Project Access** - Query data across multiple BigQuery projects with a single connection
 - **Advanced Analytics** - Column-level analysis for nulls, cardinality, and data quality
-- **Token Optimization** - Compact response formats designed for LLM efficiency  
 - **Safety Controls** - SQL validation, query limits, and read-only operations
+- **Token Optimization** - Compact response formats designed for LLM efficiency
 - **Flexible Configuration** - YAML-based project and dataset access control
+- **Docker Support** - Containerized deployment for easy integration
 
 ## Quick Start
 
@@ -20,126 +21,63 @@ A Model Context Protocol server that provides secure, cross-project access to Bi
 
 ### Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/bigquery-mcp.git
-cd bigquery-mcp
-```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/bigquery-mcp.git
+   cd bigquery-mcp
+   ```
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-3. Configure authentication:
-```bash
-# Option 1: Application Default Credentials (recommended)
-gcloud auth application-default login
+3. **Configure authentication:**
+   ```bash
+   # Option 1: Application Default Credentials (recommended)
+   gcloud auth application-default login
 
-# Option 2: Service Account (for production)
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-```
+   # Option 2: Service Account (for production)
+   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+   ```
 
-4. Set up configuration:
-```bash
-cp config/config.yaml.example config/config.yaml
-# Edit config.yaml with your project details
-```
+4. **Set up configuration:**
+   ```bash
+   cp config/config.yaml.example config/config.yaml
+   # Edit config.yaml with your project details
+   ```
 
-5. Run the server:
-```bash
-python src/server.py
-```
+5. **Run the server:**
+   ```bash
+   python src/server.py
+   ```
 
 ### Docker Deployment
 
 ```bash
-# Build the Docker image
-docker build -t bigquery-mcp .
-
-# Test the container
-docker run --rm bigquery-mcp python --version
-
-# For development with volume mounts
+# Build and run with Docker Compose
 docker-compose up --build
-```
-
-#### Claude MCP Configuration (Docker)
-
-After building the Docker image, add this to your Claude MCP configuration:
-
-```json
-{
-  "mcpServers": {
-    "bigquery": {
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-v", "/path/to/your/bigquery-mcp/config:/app/config:ro",
-        "-v", "/path/to/your/service-account.json:/app/credentials/service-account.json:ro",
-        "-e", "GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account.json",
-        "bigquery-mcp"
-      ],
-      "env": {}
-    }
-  }
-}
-```
-
-Replace `/path/to/your/bigquery-mcp/config` with the absolute path to your config directory and `/path/to/your/service-account.json` with your GCP service account key file.
-
-## Configuration
-
-### config.yaml
-
-```yaml
-bigquery:
-  billing_project: "your-billing-project"
-  
-projects:
-  - project_id: "analytics-prod"
-    project_name: "Analytics Production"
-    description: "Main data warehouse"
-    datasets: ["prod_*", "reporting_*"]
-    
-  - project_id: "raw-data"
-    project_name: "Raw Data Lake" 
-    datasets: ["*"]  # Allow all datasets
-
-limits:
-  default_row_limit: 20
-  max_query_timeout: 60
-
-security:
-  banned_sql_keywords: ["CREATE", "DROP", "DELETE", "UPDATE"]
-```
-
-### Environment Variables
-
-```bash
-# Optional overrides
-COMPACT_FORMAT=true              # Enable compact responses
-BIGQUERY_BILLING_PROJECT=my-project
-LOG_LEVEL=DEBUG
 ```
 
 ## Available Tools
 
+The server provides 6 core tools for BigQuery interaction:
+
 ### Discovery Tools
-- **list_projects()** - List configured BigQuery projects
-- **list_datasets(project)** - List datasets in a project
-- **list_tables(dataset, table_type)** - List tables in a dataset
+- **`list_projects()`** - List configured BigQuery projects
+- **`list_datasets(project)`** - List datasets in a project
+- **`list_tables(dataset, table_type)`** - List tables in a dataset
 
 ### Analysis Tools
-- **analyze_table(table)** - Get table structure and statistics
-- **analyze_columns(table, columns, include_examples, sample_size)** - Deep column analysis
+- **`analyze_table(table)`** - Get table structure and statistics
+- **`analyze_columns(table, columns, include_examples, sample_size)`** - Deep column analysis
 
 ### Query Execution
-- **execute_query(query, format, max_rows, timeout, dry_run, parameters)** - Execute SELECT queries
+- **`execute_query(query, format, max_rows, timeout, dry_run, parameters)`** - Execute SELECT queries
 
-For detailed documentation and examples, see [docs/tools.md](docs/tools.md).
+## Integration Examples
 
-## Claude Desktop Integration
+### Claude Desktop
 
 Add to your Claude Desktop configuration:
 
@@ -157,6 +95,31 @@ Add to your Claude Desktop configuration:
 }
 ```
 
+### Cursor IDE with Docker
+
+For detailed setup instructions with Cursor IDE using Docker, see the [Cursor MCP Setup Guide](docs/cursor-mcp-setup.md).
+
+## Documentation
+
+📚 **[Complete Documentation](docs/index.md)** - Full documentation site
+
+- **[Installation Guide](docs/installation.md)** - Detailed installation and setup
+- **[Configuration Guide](docs/configuration.md)** - YAML configuration and environment variables
+- **[Tools Reference](docs/tools.md)** - Complete tool documentation with examples
+- **[Development Guide](docs/development.md)** - Contributing and development setup
+
+### Building Documentation Locally
+
+```bash
+# Install documentation dependencies
+pip install mkdocs mkdocs-material
+
+# Serve documentation locally
+mkdocs serve
+
+# Open http://localhost:8000 in your browser
+```
+
 ## Testing
 
 ```bash
@@ -172,15 +135,41 @@ pytest tests/unit/test_discovery.py
 
 ## Development
 
-For code quality checks and linting, see [Development Guide](docs/development.md).
+### Code Quality
 
-## Documentation
+```bash
+# Format code
+ruff format src tests
 
-- [Architecture & Specification](docs/architecture.md) - System design and security model
-- [Tools Reference](docs/tools.md) - Detailed tool documentation with examples
-- [Development Guide](docs/development.md) - Code quality, linting, and troubleshooting
-- [Contributing Guidelines](CLAUDE.md) - Guidelines for contributors
+# Check and fix linting issues
+ruff check src tests --fix
+```
+
+For detailed development setup, see the [Development Guide](docs/development.md).
+
+## Security & Safety
+
+- **Read-only operations** - Only SELECT queries are allowed
+- **SQL validation** - Configurable banned keywords and safety checks
+- **Query limits** - Row limits, timeouts, and byte processing limits
+- **Project isolation** - Access control via YAML configuration
+- **No credentials in code** - Uses Google Cloud authentication
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+We welcome contributions! Please see the [Development Guide](docs/development.md) for details on:
+
+- Setting up a development environment
+- Code style guidelines
+- Testing requirements
+- Pull request process
+
+## Support
+
+- 📖 [Documentation](docs/index.md)
+- 🐛 [Issue Tracker](https://github.com/yourusername/bigquery-mcp/issues)
+- 💬 [Discussions](https://github.com/yourusername/bigquery-mcp/discussions)

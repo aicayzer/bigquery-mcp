@@ -1,14 +1,14 @@
 """Query execution tools with safety checks and result formatting."""
 
-import logging
-from typing import Dict, Any, List, Optional, Union
-import json
 import csv
 import io
-from datetime import datetime, date, time
+import logging
+from datetime import date, datetime, time
 from decimal import Decimal
+from typing import Any, Dict, List, Optional, Union
 
 from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter
+
 from utils.errors import QueryExecutionError, SecurityError, SQLValidationError
 from utils.validation import SQLValidator
 
@@ -52,9 +52,7 @@ def _validate_query_safety(query: str) -> None:
         raise SecurityError("Only SELECT queries are allowed")
 
 
-def _format_query_results(
-    results: List[Dict], format_type: str = "json"
-) -> Union[str, List[Dict]]:
+def _format_query_results(results: List[Dict], format_type: str = "json") -> Union[str, List[Dict]]:
     """Format query results based on requested format.
 
     Args:
@@ -105,9 +103,7 @@ def _format_query_results(
 
         # Rows
         for row in results:
-            line = " | ".join(
-                str(row.get(col, "")).ljust(widths[col]) for col in columns
-            )
+            line = " | ".join(str(row.get(col, "")).ljust(widths[col]) for col in columns)
             lines.append(line)
 
         return "\n".join(lines)
@@ -238,42 +234,58 @@ def execute_query(
             }
 
         # Get results with proper timeout handling
-        # Use the same timeout for waiting for results as for query execution
-        query_result = query_job.result(max_results=max_rows, timeout=timeout)
-        results = list(query_result) if query_result is not None else []
+        # Wait for the query to complete and get the row iterator
+        rows_iterator = query_job.result(timeout=timeout)
+
+        # CRITICAL FIX: Get schema BEFORE consuming the iterator
+        schema_fields = None
+        if rows_iterator:
+            # Get schema from row iterator (more reliable than query_job.schema for executed queries)
+            if hasattr(rows_iterator, "schema") and rows_iterator.schema:
+                schema_fields = rows_iterator.schema
+            elif query_job.schema:
+                schema_fields = query_job.schema
+
+        # Convert iterator to list with row limiting
+        results = []
+        if rows_iterator:
+            for row in rows_iterator:
+                results.append(row)
+                if max_rows and len(results) >= max_rows:
+                    break
 
         # Convert to dictionaries with proper serialization
         rows = []
-        if results and query_job.schema:
-            for row in results:
-                row_dict = {}
-                for field in query_job.schema:
-                    try:
+        if results:
+            if schema_fields:
+                # Use proper schema
+                for row in results:
+                    row_dict = {}
+                    for field in schema_fields:
                         value = row[field.name]
                         row_dict[field.name] = _serialize_value(value)
-                    except (KeyError, IndexError) as e:
-                        logger.warning(f"Failed to access field {field.name}: {e}")
-                        row_dict[field.name] = None
-                rows.append(row_dict)
+                    rows.append(row_dict)
+            else:
+                # Fallback: convert rows directly (BigQuery Row objects are dict-like)
+                for row in results:
+                    row_dict = {}
+                    for key, value in row.items():
+                        row_dict[key] = _serialize_value(value)
+                    rows.append(row_dict)
 
         # Format results
+
         formatted_results = _format_query_results(rows, format)
 
         # Build response
         response = {
             "status": "success",
             "row_count": len(rows),
-            "total_rows": (
-                query_job.total_rows if hasattr(query_job, "total_rows") else len(rows)
-            ),
+            "total_rows": (query_job.total_rows if hasattr(query_job, "total_rows") else len(rows)),
             "bytes_processed": query_job.total_bytes_processed,
             "bytes_billed": query_job.total_bytes_billed,
-            "cache_hit": (
-                query_job.cache_hit if hasattr(query_job, "cache_hit") else False
-            ),
-            "slot_millis": (
-                query_job.slot_millis if hasattr(query_job, "slot_millis") else None
-            ),
+            "cache_hit": (query_job.cache_hit if hasattr(query_job, "cache_hit") else False),
+            "slot_millis": (query_job.slot_millis if hasattr(query_job, "slot_millis") else None),
         }
 
         # Add results based on format
@@ -281,7 +293,7 @@ def execute_query(
             response["results"] = formatted_results
 
             # Add schema in non-compact mode
-            if not formatter.compact_mode:
+            if not formatter.compact_mode and schema_fields:
                 response["schema"] = [
                     {
                         "name": field.name,
@@ -289,7 +301,7 @@ def execute_query(
                         "mode": field.mode,
                         "description": field.description or "",
                     }
-                    for field in query_job.schema
+                    for field in schema_fields
                 ]
         else:
             response["format"] = format
@@ -313,13 +325,11 @@ def execute_query(
         # Handle specific error types
         if "403" in error_str:
             raise QueryExecutionError(
-                f"Permission denied. Ensure you have bigquery.jobs.create permission "
-                f"and access to the referenced tables."
+                "Permission denied. Ensure you have bigquery.jobs.create permission "
+                "and access to the referenced tables."
             )
         elif "404" in error_str:
-            raise QueryExecutionError(
-                f"Table not found. Check the table references in your query."
-            )
+            raise QueryExecutionError("Table not found. Check the table references in your query.")
         elif "Syntax error" in error_str:
             raise QueryExecutionError(f"SQL syntax error: {error_str}")
         elif isinstance(e, TimeoutError) or "TimeoutError" in str(type(e)):

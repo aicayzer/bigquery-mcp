@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-01-07
+
+### Added
+- MkDocs documentation site with Material theme
+- GitHub Actions workflow for automatic documentation deployment
+- MIT license
+
+### Changed
+- Updated project metadata for PyPI publication
+- Migrated from scattered markdown files to organized MkDocs documentation
+- Updated dependencies: added mkdocs and mkdocs-material, removed mypy and types-PyYAML
+
+### Fixed
+- Removed all workplace-specific references from tracked files
+- Fixed test mocks for execute_query function
+- Updated all version references to 1.0.0
+- Corrected development guide to reference ruff instead of deprecated tools
+
+### Removed
+- Unused lint scripts and development artifacts
+
+## [0.5.2] - 2025-01-07
+
+### Fixed
+- Fixed execute_query function returning empty results
+- Cleaned up debug logging from previous debugging attempts
+- Improved schema handling for query results
+
+## [0.5.1] - 2025-01-07
+
+### Fixed
+- Fixed execute_query NoneType error when iterating query results
+  - query_job.result() returns a RowIterator that we iterate over
+  - Added defensive None check for edge cases
+  - Manual row limiting applied during iteration
+  - Prevents "'NoneType' object is not iterable" error
+
+### Added
+- Docker MCP integration for Cursor IDE
+  - Complete Docker configuration for MCP server deployment
+  - Cursor-specific setup documentation with step-by-step instructions
+  - Proper Google Cloud authentication handling in containers
+
+### Changed
+- Migrated from black/flake8 to ruff for code formatting and linting
+  - Updated pyproject.toml with ruff configuration
+  - Removed legacy black and flake8 configurations
+  - Updated GitHub Actions CI workflow to use ruff
+  - Removed mypy from CI pipeline (type checking deferred)
+- Improved code quality:
+  - Fixed all ruff linting issues
+  - Removed unused variables and imports
+  - Updated lint script to use ruff exclusively
+
+### Removed
+- Cleaned up accidentally added directories:
+  - Removed `/genai-toolbox/` (unrelated Go project)
+  - Removed `/servers/` (unrelated TypeScript project)
+  - Already added to .gitignore to prevent re-addition
+- Legacy linting tools:
+  - Removed black and flake8 configurations
+  - Removed mypy from GitHub Actions workflow
+
 ## [0.5.0] - 2025-01-07
 
 ### Added
@@ -72,7 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed timeout handling in BigQuery client - removed incorrect timeout parameter from query() method
 - Updated dependencies - added `fastmcp>=0.1.0` to requirements.txt
 
-### Changed 
+### Changed
 - Simplified `analyze_table` output:
   - Removed `sample_info` section (function analyzes full table schema)
   - Removed `mode` field from column info (redundant with nullable)
@@ -250,7 +313,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Versions
 
-<!-- 
+<!--
 Version template:
 
 ## [0.x.y] - YYYY-MM-DD

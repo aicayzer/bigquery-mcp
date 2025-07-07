@@ -1,8 +1,9 @@
 """SQL validation utilities for query safety."""
 
-import re
 import logging
+import re
 from typing import List, Optional
+
 import sqlparse
 
 from config import get_config
@@ -17,9 +18,7 @@ class SQLValidator:
     def __init__(self, config=None):
         """Initialize validator with configuration."""
         self.config = config or get_config()
-        self.banned_keywords = [
-            kw.upper() for kw in self.config.security.banned_sql_keywords
-        ]
+        self.banned_keywords = [kw.upper() for kw in self.config.security.banned_sql_keywords]
 
     def validate_query(self, sql: str) -> None:
         """
@@ -59,9 +58,7 @@ class SQLValidator:
             # Use word boundaries to avoid partial matches
             pattern = r"\b" + re.escape(keyword) + r"\b"
             if re.search(pattern, sql_normalized):
-                raise SQLValidationError(
-                    f"Forbidden SQL operation: {keyword} (read-only server)"
-                )
+                raise SQLValidationError(f"Forbidden SQL operation: {keyword} (read-only server)")
 
     def _remove_string_literals(self, sql: str) -> str:
         """Remove string literals from SQL to avoid false positives."""
@@ -86,9 +83,7 @@ class SQLValidator:
             # Get the statement type
             stmt_type = statement.get_type()
             if stmt_type != "SELECT":
-                raise SQLValidationError(
-                    f"Only SELECT statements are allowed, got: {stmt_type}"
-                )
+                raise SQLValidationError(f"Only SELECT statements are allowed, got: {stmt_type}")
 
         except SQLValidationError:
             raise
@@ -160,7 +155,7 @@ class SQLValidator:
                     elif from_seen and token.ttype is None:
                         # Potential table reference
                         table_ref = token.value.strip()
-                        if table_ref and not table_ref.upper() in (
+                        if table_ref and table_ref.upper() not in (
                             "WHERE",
                             "GROUP",
                             "ORDER",
