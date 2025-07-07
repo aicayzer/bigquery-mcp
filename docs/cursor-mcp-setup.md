@@ -47,7 +47,7 @@ Add this configuration to your Cursor MCP settings:
         "run",
         "--rm",
         "-i",
-        "--env", "BIGQUERY_BILLING_PROJECT=august-cayzer-8793",
+        "--env", "BIGQUERY_BILLING_PROJECT=your-billing-project",
         "--env", "LOG_LEVEL=INFO",
         "--env", "COMPACT_FORMAT=true",
         "--volume", "/Users/august.cayzer/Documents/codebase/aic/bigquery-mcp/config:/app/config:ro",
@@ -63,7 +63,7 @@ Add this configuration to your Cursor MCP settings:
 **Important**: Update the paths in the configuration:
 - Replace `/Users/august.cayzer/Documents/codebase/aic/bigquery-mcp` with your actual project path
 - Replace `/Users/august.cayzer/.config/gcloud` with your gcloud config path
-- Replace `august-cayzer-8793` with your BigQuery billing project ID
+- Replace `your-billing-project` with your BigQuery billing project ID
 
 ## Step 4: Verify the Setup
 

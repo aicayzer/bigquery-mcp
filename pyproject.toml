@@ -1,10 +1,21 @@
 [tool.poetry]
 name = "bigquery-mcp"
-version = "0.5.1"
+version = "1.0.0"
 description = "A Model Context Protocol server for BigQuery with cross-project support"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["BigQuery MCP Contributors"]
 readme = "README.md"
-python = "^3.11"
+license = "MIT"
+homepage = "https://github.com/yourusername/bigquery-mcp"
+repository = "https://github.com/yourusername/bigquery-mcp"
+keywords = ["bigquery", "mcp", "model-context-protocol", "ai", "llm"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -22,6 +33,7 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [".github/workflows/*.yml", ".github/workflows/*.yaml"]
 
 [tool.ruff.lint]
 # Enable pycodestyle (`E`), Pyflakes (`F`), and import sorting (`I`)

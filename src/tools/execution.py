@@ -235,32 +235,43 @@ def execute_query(
 
         # Get results with proper timeout handling
         # Wait for the query to complete and get the row iterator
-        logger.info("DEBUG: About to call query_job.result() - v0.5.1")
         rows_iterator = query_job.result(timeout=timeout)
-        logger.info(
-            f"DEBUG: rows_iterator type: {type(rows_iterator)}, is None: {rows_iterator is None}"
-        )
+
+        # CRITICAL FIX: Get schema BEFORE consuming the iterator
+        schema_fields = None
+        if rows_iterator:
+            # Get schema from row iterator (more reliable than query_job.schema for executed queries)
+            if hasattr(rows_iterator, "schema") and rows_iterator.schema:
+                schema_fields = rows_iterator.schema
+            elif query_job.schema:
+                schema_fields = query_job.schema
 
         # Convert iterator to list with row limiting
         results = []
         if rows_iterator:
-            logger.info("DEBUG: Starting to iterate over rows - v0.5.1")
             for row in rows_iterator:
                 results.append(row)
                 if max_rows and len(results) >= max_rows:
                     break
-            logger.info(f"DEBUG: Collected {len(results)} rows from iterator - v0.5.1")
 
         # Convert to dictionaries with proper serialization
         rows = []
-        # Only process if we have both results and schema
-        if results and query_job.schema:
-            for row in results:
-                row_dict = {}
-                for field in query_job.schema:
-                    value = row[field.name]
-                    row_dict[field.name] = _serialize_value(value)
-                rows.append(row_dict)
+        if results:
+            if schema_fields:
+                # Use proper schema
+                for row in results:
+                    row_dict = {}
+                    for field in schema_fields:
+                        value = row[field.name]
+                        row_dict[field.name] = _serialize_value(value)
+                    rows.append(row_dict)
+            else:
+                # Fallback: convert rows directly (BigQuery Row objects are dict-like)
+                for row in results:
+                    row_dict = {}
+                    for key, value in row.items():
+                        row_dict[key] = _serialize_value(value)
+                    rows.append(row_dict)
 
         # Format results
         formatted_results = _format_query_results(rows, format)
@@ -281,7 +292,7 @@ def execute_query(
             response["results"] = formatted_results
 
             # Add schema in non-compact mode
-            if not formatter.compact_mode:
+            if not formatter.compact_mode and schema_fields:
                 response["schema"] = [
                     {
                         "name": field.name,
@@ -289,7 +300,7 @@ def execute_query(
                         "mode": field.mode,
                         "description": field.description or "",
                     }
-                    for field in query_job.schema
+                    for field in schema_fields
                 ]
         else:
             response["format"] = format

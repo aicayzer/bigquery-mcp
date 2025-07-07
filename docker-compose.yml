@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   bigquery-mcp:
     build: .
@@ -11,7 +9,7 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - COMPACT_FORMAT=${COMPACT_FORMAT:-true}
-      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-august-cayzer-8793}
+      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-your-billing-project}
       # No GOOGLE_APPLICATION_CREDENTIALS - let it discover automatically
     stdin_open: true
     tty: false

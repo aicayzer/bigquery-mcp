@@ -97,55 +97,7 @@ Add to your Claude Desktop configuration:
 
 ### Cursor IDE with Docker
 
-For detailed setup instructions with Cursor IDE using Docker, see the [Cursor MCP Setup Guide](docs/cursor-mcp-setup.md).
-
-## Documentation
-
-📚 **[Complete Documentation](docs/index.md)** - Full documentation site
-
-- **[Installation Guide](docs/installation.md)** - Detailed installation and setup
-- **[Configuration Guide](docs/configuration.md)** - YAML configuration and environment variables
-- **[Tools Reference](docs/tools.md)** - Complete tool documentation with examples
-- **[Development Guide](docs/development.md)** - Contributing and development setup
-
-### Building Documentation Locally
-
-```bash
-# Install documentation dependencies
-pip install mkdocs mkdocs-material
-
-# Serve documentation locally
-mkdocs serve
-
-# Open http://localhost:8000 in your browser
-```
-
-## Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src tests/
-
-# Run specific test file
-pytest tests/unit/test_discovery.py
-```
-
-## Development
-
-### Code Quality
-
-```bash
-# Format code
-ruff format src tests
-
-# Check and fix linting issues
-ruff check src tests --fix
-```
-
-For detailed development setup, see the [Development Guide](docs/development.md).
+For detailed setup instructions with Cursor IDE using Docker, see the [Cursor MCP Setup Guide](cursor-mcp-setup.md).
 
 ## Security & Safety
 
@@ -155,21 +107,9 @@ For detailed development setup, see the [Development Guide](docs/development.md)
 - **Project isolation** - Access control via YAML configuration
 - **No credentials in code** - Uses Google Cloud authentication
 
-## License
+## Next Steps
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-We welcome contributions! Please see the [Development Guide](docs/development.md) for details on:
-
-- Setting up a development environment
-- Code style guidelines
-- Testing requirements
-- Pull request process
-
-## Support
-
-- 📖 [Documentation](docs/index.md)
-- 🐛 [Issue Tracker](https://github.com/yourusername/bigquery-mcp/issues)
-- 💬 [Discussions](https://github.com/yourusername/bigquery-mcp/discussions)
+- [Installation Guide](installation.md) - Detailed installation and setup
+- [Tools Reference](tools.md) - Complete tool documentation with examples
+- [Configuration Guide](configuration.md) - YAML configuration and environment variables
+- [Development Guide](development.md) - Contributing and development setup

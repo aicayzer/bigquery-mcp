@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-01-07
+
+### Added
+- MkDocs documentation site with Material theme
+- GitHub Actions workflow for automatic documentation deployment
+- MIT license
+
+### Changed
+- Updated project metadata for PyPI publication
+- Migrated from scattered markdown files to organized MkDocs documentation
+- Updated dependencies: added mkdocs and mkdocs-material, removed mypy and types-PyYAML
+
+### Fixed
+- Removed all workplace-specific references from tracked files
+- Fixed test mocks for execute_query function
+- Updated all version references to 1.0.0
+- Corrected development guide to reference ruff instead of deprecated tools
+
+### Removed
+- Unused lint scripts and development artifacts
+
+## [0.5.2] - 2025-01-07
+
+### Fixed
+- Fixed execute_query function returning empty results
+- Cleaned up debug logging from previous debugging attempts
+- Improved schema handling for query results
+
 ## [0.5.1] - 2025-01-07
 
 ### Fixed

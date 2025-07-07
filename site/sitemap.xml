@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://github.com/aicayzer/bigquery-mcp/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://github.com/aicayzer/bigquery-mcp/architecture/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://github.com/aicayzer/bigquery-mcp/configuration/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://github.com/aicayzer/bigquery-mcp/cursor-mcp-setup/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://github.com/aicayzer/bigquery-mcp/development/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://github.com/aicayzer/bigquery-mcp/installation/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://github.com/aicayzer/bigquery-mcp/tools/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+</urlset>
