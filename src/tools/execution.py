@@ -274,6 +274,7 @@ def execute_query(
                     rows.append(row_dict)
 
         # Format results
+
         formatted_results = _format_query_results(rows, format)
 
         # Build response
