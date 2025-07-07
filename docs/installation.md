@@ -23,7 +23,7 @@ This guide covers different ways to install and deploy the BigQuery MCP Server.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/bigquery-mcp.git
+   git clone https://github.com/aicayzer/bigquery-mcp.git
    cd bigquery-mcp
    ```
 
@@ -47,7 +47,7 @@ This guide covers different ways to install and deploy the BigQuery MCP Server.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/bigquery-mcp.git
+   git clone https://github.com/aicayzer/bigquery-mcp.git
    cd bigquery-mcp
    ```
 

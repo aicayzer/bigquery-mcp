@@ -15,7 +15,7 @@ This guide covers setting up a development environment and contributing to the B
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/bigquery-mcp.git
+   git clone https://github.com/aicayzer/bigquery-mcp.git
    cd bigquery-mcp
    ```
 
