@@ -41,7 +41,7 @@ Add this configuration to your Cursor MCP settings:
 ```json
 {
   "mcpServers": {
-    "bigquery-mcp": {
+    "bigquery": {
       "command": "docker",
       "args": [
         "run",
@@ -111,7 +111,7 @@ If you prefer not to use Docker, you can run the MCP server directly:
 ```json
 {
   "mcpServers": {
-    "bigquery-mcp": {
+    "bigquery": {
       "command": "python",
       "args": ["/path/to/bigquery-mcp/src/server.py"],
       "env": {

@@ -46,7 +46,7 @@ Add this configuration to your Claude Desktop MCP settings:
 ```json
 {
   "mcpServers": {
-    "bigquery-mcp": {
+    "bigquery": {
       "command": "docker",
       "args": [
         "run",
@@ -113,7 +113,7 @@ pip install -r requirements.txt
 ```json
 {
   "mcpServers": {
-    "bigquery-mcp": {
+    "bigquery": {
       "command": "python",
       "args": ["/path/to/bigquery-mcp/src/server.py"],
       "env": {
@@ -267,7 +267,7 @@ For debugging, you can increase log verbosity:
 ```json
 {
   "mcpServers": {
-    "bigquery-mcp": {
+    "bigquery": {
       "command": "docker",
       "args": [
         "run", "--rm", "-i",

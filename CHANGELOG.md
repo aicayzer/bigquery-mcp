@@ -5,7 +5,7 @@ All notable changes to the BigQuery MCP Server project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [LATEST]
 
 ## [1.0.0] - 2025-01-07
 
@@ -16,7 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT license
 
 ### Changed
-- Updated project metadata for PyPI publication
 - Migrated from scattered markdown files to organized MkDocs documentation
 - Converted from Poetry to pip-native package configuration in pyproject.toml
 - Updated dependencies: added mkdocs and mkdocs-material, removed mypy and types-PyYAML
