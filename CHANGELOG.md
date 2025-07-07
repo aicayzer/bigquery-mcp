@@ -12,20 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - MkDocs documentation site with Material theme
 - GitHub Actions workflow for automatic documentation deployment
+- Comprehensive Claude Desktop setup guide with Docker and Python options
 - MIT license
 
 ### Changed
 - Updated project metadata for PyPI publication
 - Migrated from scattered markdown files to organized MkDocs documentation
+- Converted from Poetry to pip-native package configuration in pyproject.toml
 - Updated dependencies: added mkdocs and mkdocs-material, removed mypy and types-PyYAML
+- Organized setup guides under dedicated navigation section
 
 ### Fixed
 - Removed all workplace-specific references from tracked files
 - Fixed test mocks for execute_query function
+- Fixed unused variable linting issues in analysis.py (removed 8 F841 errors)
 - Updated all version references to 1.0.0
 - Corrected development guide to reference ruff instead of deprecated tools
 
 ### Removed
+- Poetry configuration and dependencies (now pip-native)
 - Unused lint scripts and development artifacts
 
 ## [0.5.2] - 2025-01-07

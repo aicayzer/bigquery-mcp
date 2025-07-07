@@ -1,12 +1,10 @@
-[tool.poetry]
+[project]
 name = "bigquery-mcp"
 version = "1.0.0"
 description = "A Model Context Protocol server for BigQuery with cross-project support"
-authors = ["BigQuery MCP Contributors"]
+authors = [{name = "BigQuery MCP Contributors"}]
 readme = "README.md"
-license = "MIT"
-homepage = "https://github.com/yourusername/bigquery-mcp"
-repository = "https://github.com/yourusername/bigquery-mcp"
+license = {text = "MIT"}
 keywords = ["bigquery", "mcp", "model-context-protocol", "ai", "llm"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -16,6 +14,18 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=0.1.0",
+    "google-cloud-bigquery>=3.0.0",
+    "PyYAML>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/aicayzer/bigquery-mcp"
+Repository = "https://github.com/aicayzer/bigquery-mcp"
+Issues = "https://github.com/aicayzer/bigquery-mcp/issues"
+Documentation = "https://aicayzer.github.io/bigquery-mcp/"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -69,5 +79,5 @@ skip-magic-trailing-comma = false
 indent-style = "space"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
