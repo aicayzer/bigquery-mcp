@@ -536,9 +536,7 @@ def analyze_columns(
                 try:
                     total_count = int(total_count) if total_count is not None else 0
                     null_count = int(null_count) if null_count is not None else 0
-                    distinct_count = (
-                        int(distinct_count) if distinct_count is not None else 0
-                    )
+                    distinct_count = int(distinct_count) if distinct_count is not None else 0
                 except (ValueError, TypeError):
                     total_count = 0
                     null_count = 0
@@ -571,6 +569,7 @@ def analyze_columns(
 
                 # Add type-specific analysis
                 if field.field_type in ["INT64", "FLOAT64", "NUMERIC", "BIGNUMERIC"]:
+
                     def safe_float(val):
                         """Safely convert to float, handling None and Mock objects."""
                         if val is None:
@@ -584,7 +583,6 @@ def analyze_columns(
                             return float(val)
                         except (TypeError, ValueError):
                             return None
-
 
                     col_analysis["numeric_stats"] = {
                         "min": (
@@ -606,24 +604,15 @@ def analyze_columns(
                     quartiles = _safe_get_value(results, "quartiles")
                     if quartiles:
                         col_analysis["numeric_stats"]["quartiles"] = {
-                            "q0_min": (
-                                safe_float(quartiles[0]) if len(quartiles) > 0 else None
-                            ),
-                            "q1": (
-                                safe_float(quartiles[1]) if len(quartiles) > 1 else None
-                            ),
-                            "q2_median": (
-                                safe_float(quartiles[2]) if len(quartiles) > 2 else None
-                            ),
-                            "q3": (
-                                safe_float(quartiles[3]) if len(quartiles) > 3 else None
-                            ),
-                            "q4_max": (
-                                safe_float(quartiles[4]) if len(quartiles) > 4 else None
-                            ),
+                            "q0_min": (safe_float(quartiles[0]) if len(quartiles) > 0 else None),
+                            "q1": (safe_float(quartiles[1]) if len(quartiles) > 1 else None),
+                            "q2_median": (safe_float(quartiles[2]) if len(quartiles) > 2 else None),
+                            "q3": (safe_float(quartiles[3]) if len(quartiles) > 3 else None),
+                            "q4_max": (safe_float(quartiles[4]) if len(quartiles) > 4 else None),
                         }
 
                 elif field.field_type == "STRING":
+
                     def safe_round(val, decimals=2):
                         """Safely round a value, handling None and Mock objects."""
                         if val is None:
@@ -764,4 +753,3 @@ def register_analysis_tools(
     mcp.tool()(handle_error(analyze_columns))
 
     logger.info("Analysis tools registered successfully")
-
