@@ -7,12 +7,12 @@ services:
     volumes:
       - ./config:/app/config:ro
       - ./logs:/app/logs
-      - ${GOOGLE_APPLICATION_CREDENTIALS:-/dev/null}:/app/credentials/service-account.json:ro
+      - ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - COMPACT_FORMAT=${COMPACT_FORMAT:-false}
-      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:+/app/credentials/service-account.json}
+      - COMPACT_FORMAT=${COMPACT_FORMAT:-true}
+      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-august-cayzer-8793}
+      # No GOOGLE_APPLICATION_CREDENTIALS - let it discover automatically
     stdin_open: true
-    tty: true
-    restart: unless-stopped
+    tty: false
+    # restart: unless-stopped  # Disabled for MCP usage

@@ -4,17 +4,13 @@
 echo "Running code formatters and linters..."
 echo "======================================="
 
-# Format with black
-echo "1. Running black formatter..."
-black src tests
+# Format with ruff
+echo "1. Running ruff formatter..."
+ruff format src tests
 
-# Check with flake8
-echo -e "\n2. Running flake8 linter..."
-flake8 src tests
-
-# Type check with mypy
-echo -e "\n3. Running mypy type checker..."
-mypy src
+# Check with ruff
+echo -e "\n2. Running ruff linter..."
+ruff check src tests --fix
 
 echo -e "\nCode quality checks complete!"
 echo "Fix any issues above before committing."

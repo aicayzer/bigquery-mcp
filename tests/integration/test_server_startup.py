@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 """Simple test to verify server can start without errors."""
 
-import sys
 import os
-import pytest
+import sys
 
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src")))
 
 # from server import initialize_server, mcp, get_server_info, health_check
-from server import initialize_server, mcp, bq_client, config, formatter, handle_error
 import tools.discovery
+from server import bq_client, config, formatter, handle_error, initialize_server, mcp
 
 
 def test_server_startup():
@@ -27,9 +24,7 @@ def test_server_startup():
 
         # Register tools
         print("\n2. Registering discovery tools...")
-        tools.discovery.register_discovery_tools(
-            mcp, handle_error, bq_client, config, formatter
-        )
+        tools.discovery.register_discovery_tools(mcp, handle_error, bq_client, config, formatter)
         print("   ✓ Discovery tools registered")
 
         # Test basic functionality - just verify no errors
@@ -48,7 +43,7 @@ def test_server_startup():
 
         # Assert that all components are properly initialized
         assert mcp is not None, "MCP instance should be initialized"
-        print(f"   ✓ Server initialization completed successfully")
+        print("   ✓ Server initialization completed successfully")
 
     except Exception as e:
         print(f"\n❌ Server startup failed: {e}")

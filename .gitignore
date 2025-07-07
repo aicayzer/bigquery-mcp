@@ -77,3 +77,7 @@ Thumbs.db
 # Google Cloud credentials
 *.json
 !config/*.example.json
+
+# Accidentally added directories
+genai-toolbox/
+servers/

@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-01-07
+
+### Fixed
+- Fixed execute_query NoneType error when iterating query results
+  - query_job.result() returns a RowIterator that we iterate over
+  - Added defensive None check for edge cases
+  - Manual row limiting applied during iteration
+  - Prevents "'NoneType' object is not iterable" error
+
+### Added
+- Docker MCP integration for Cursor IDE
+  - Complete Docker configuration for MCP server deployment
+  - Cursor-specific setup documentation with step-by-step instructions
+  - Proper Google Cloud authentication handling in containers
+
+### Changed
+- Migrated from black/flake8 to ruff for code formatting and linting
+  - Updated pyproject.toml with ruff configuration
+  - Removed legacy black and flake8 configurations
+  - Updated GitHub Actions CI workflow to use ruff
+  - Removed mypy from CI pipeline (type checking deferred)
+- Improved code quality:
+  - Fixed all ruff linting issues
+  - Removed unused variables and imports
+  - Updated lint script to use ruff exclusively
+
+### Removed
+- Cleaned up accidentally added directories:
+  - Removed `/genai-toolbox/` (unrelated Go project)
+  - Removed `/servers/` (unrelated TypeScript project)
+  - Already added to .gitignore to prevent re-addition
+- Legacy linting tools:
+  - Removed black and flake8 configurations
+  - Removed mypy from GitHub Actions workflow
+
 ## [0.5.0] - 2025-01-07
 
 ### Added
@@ -72,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed timeout handling in BigQuery client - removed incorrect timeout parameter from query() method
 - Updated dependencies - added `fastmcp>=0.1.0` to requirements.txt
 
-### Changed 
+### Changed
 - Simplified `analyze_table` output:
   - Removed `sample_info` section (function analyzes full table schema)
   - Removed `mode` field from column info (redundant with nullable)
@@ -250,7 +285,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Versions
 
-<!-- 
+<!--
 Version template:
 
 ## [0.x.y] - YYYY-MM-DD

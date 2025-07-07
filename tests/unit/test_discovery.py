@@ -1,16 +1,14 @@
 """Unit tests for discovery tools."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
-import json
 import os
 import sys
+from datetime import datetime
+from unittest.mock import Mock
+
+import pytest
 
 # Add src to path
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src"))
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
 
 
 class TestListProjects:
@@ -32,9 +30,7 @@ class TestListProjects:
 
     def test_list_projects_standard_format(self, mock_dependencies):
         """Test listing projects in standard format."""
-        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = (
-            mock_dependencies
-        )
+        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = mock_dependencies
 
         # Set up mock config
         mock_project = Mock()
@@ -68,9 +64,7 @@ class TestListProjects:
 
     def test_list_projects_compact_format(self, mock_dependencies):
         """Test listing projects in compact format."""
-        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = (
-            mock_dependencies
-        )
+        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = mock_dependencies
         mock_formatter.compact_mode = True
 
         # Set up mock config
@@ -95,9 +89,7 @@ class TestListProjects:
 
     def test_list_projects_multiple_projects(self, mock_dependencies):
         """Test listing multiple projects."""
-        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = (
-            mock_dependencies
-        )
+        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = mock_dependencies
 
         # Create multiple mock projects
         project1 = Mock()
@@ -147,9 +139,7 @@ class TestListDatasets:
 
     def test_list_datasets_default_project(self, mock_dependencies):
         """Test listing datasets in default billing project."""
-        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = (
-            mock_dependencies
-        )
+        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = mock_dependencies
 
         # Mock dataset objects
         mock_dataset1 = Mock()
@@ -211,9 +201,7 @@ class TestListDatasets:
 
     def test_list_datasets_project_not_allowed(self, mock_dependencies):
         """Test error when project is not in allowed list."""
-        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = (
-            mock_dependencies
-        )
+        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = mock_dependencies
 
         mock_config.is_project_allowed.return_value = False
 
@@ -233,9 +221,7 @@ class TestListDatasets:
 
     def test_list_datasets_permission_denied(self, mock_dependencies):
         """Test handling permission denied errors."""
-        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = (
-            mock_dependencies
-        )
+        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = mock_dependencies
 
         mock_config.is_project_allowed.return_value = True
         mock_bq_client.list_datasets.side_effect = Exception("403 Permission denied")
@@ -274,9 +260,7 @@ class TestListTables:
 
     def test_list_tables_all_types(self, mock_dependencies):
         """Test listing all table types."""
-        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = (
-            mock_dependencies
-        )
+        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = mock_dependencies
 
         # Mock table objects
         mock_table1 = Mock()
@@ -349,9 +333,7 @@ class TestListTables:
 
     def test_list_tables_invalid_type(self, mock_dependencies):
         """Test error with invalid table type."""
-        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = (
-            mock_dependencies
-        )
+        mock_mcp, mock_handle_error, mock_bq_client, mock_config, mock_formatter = mock_dependencies
 
         from tools import discovery
 

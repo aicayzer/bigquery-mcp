@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
 """Test script to verify BigQuery MCP server functionality."""
 
-import sys
-import os
 import json
-import pytest
+import os
+import sys
 
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src")))
 
 # from server import initialize_server, mcp, get_server_info, health_check, bq_client, config, formatter, handle_error
-from server import initialize_server, mcp, bq_client, config, formatter, handle_error
 import tools.discovery
+from server import bq_client, config, formatter, handle_error, initialize_server, mcp
 
 
 def load_mock_data():
     """Load mock data from fixtures."""
-    fixture_path = os.path.join(
-        os.path.dirname(__file__), "..", "fixtures", "sample_data.json"
-    )
+    fixture_path = os.path.join(os.path.dirname(__file__), "..", "fixtures", "sample_data.json")
     with open(fixture_path, "r") as f:
         return json.load(f)
 
@@ -30,7 +25,7 @@ def test_with_mock_fallback():
     print("-" * 50)
 
     mock_data = load_mock_data()
-    using_mock = False
+    # using_mock flag removed - not needed
 
     try:
         # Initialize server
@@ -38,9 +33,7 @@ def test_with_mock_fallback():
         initialize_server()
 
         # Register discovery tools
-        tools.discovery.register_discovery_tools(
-            mcp, handle_error, bq_client, config, formatter
-        )
+        tools.discovery.register_discovery_tools(mcp, handle_error, bq_client, config, formatter)
 
         print("   ✓ Server initialized successfully")
 
@@ -58,7 +51,7 @@ def test_with_mock_fallback():
         # print(f"   Status: {health['status']}")
 
         # Check if BigQuery is actually accessible
-        bigquery_healthy = True
+        # bigquery_healthy flag removed - not needed
         # for check, status in health['checks'].items():
         #     print(f"   - {check}: {status}")
         #     if check == 'bigquery_access' and 'error' in str(status):
@@ -82,9 +75,7 @@ def test_with_mock_fallback():
 
         print("   Mock tables in sample_news:")
         for table in mock_data["sample_tables"]:
-            print(
-                f"   - {table['table_id']} ({table['table_type']}, {table['num_rows']} rows)"
-            )
+            print(f"   - {table['table_id']} ({table['table_type']}, {table['num_rows']} rows)")
 
         print("\n" + "=" * 50)
         print("✓ Server initialized successfully")
@@ -119,9 +110,7 @@ def test_basic_functionality():
     try:
         # Initialize server
         initialize_server()
-        tools.discovery.register_discovery_tools(
-            mcp, handle_error, bq_client, config, formatter
-        )
+        tools.discovery.register_discovery_tools(mcp, handle_error, bq_client, config, formatter)
 
         # Test server info - commented out as these don't exist
         # info = get_server_info()
@@ -138,9 +127,7 @@ def test_basic_functionality():
         print("✓ All tools registered and callable through MCP server")
 
         # Assert that tools are properly registered
-        assert hasattr(
-            tools.discovery, "list_projects"
-        ), "list_projects should be available"
+        assert hasattr(tools.discovery, "list_projects"), "list_projects should be available"
 
     except Exception as e:
         print(f"✗ Basic functionality test failed: {e}")

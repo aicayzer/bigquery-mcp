@@ -1,14 +1,14 @@
 """Query execution tools with safety checks and result formatting."""
 
-import logging
-from typing import Dict, Any, List, Optional, Union
-import json
 import csv
 import io
-from datetime import datetime, date, time
+import logging
+from datetime import date, datetime, time
 from decimal import Decimal
+from typing import Any, Dict, List, Optional, Union
 
 from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter
+
 from utils.errors import QueryExecutionError, SecurityError, SQLValidationError
 from utils.validation import SQLValidator
 
@@ -52,9 +52,7 @@ def _validate_query_safety(query: str) -> None:
         raise SecurityError("Only SELECT queries are allowed")
 
 
-def _format_query_results(
-    results: List[Dict], format_type: str = "json"
-) -> Union[str, List[Dict]]:
+def _format_query_results(results: List[Dict], format_type: str = "json") -> Union[str, List[Dict]]:
     """Format query results based on requested format.
 
     Args:
@@ -105,9 +103,7 @@ def _format_query_results(
 
         # Rows
         for row in results:
-            line = " | ".join(
-                str(row.get(col, "")).ljust(widths[col]) for col in columns
-            )
+            line = " | ".join(str(row.get(col, "")).ljust(widths[col]) for col in columns)
             lines.append(line)
 
         return "\n".join(lines)
@@ -238,17 +234,33 @@ def execute_query(
             }
 
         # Get results with proper timeout handling
-        # Use the same timeout for waiting for results as for query execution
-        results = list(query_job.result(max_results=max_rows, timeout=timeout))
+        # Wait for the query to complete and get the row iterator
+        logger.info("DEBUG: About to call query_job.result() - v0.5.1")
+        rows_iterator = query_job.result(timeout=timeout)
+        logger.info(
+            f"DEBUG: rows_iterator type: {type(rows_iterator)}, is None: {rows_iterator is None}"
+        )
+
+        # Convert iterator to list with row limiting
+        results = []
+        if rows_iterator:
+            logger.info("DEBUG: Starting to iterate over rows - v0.5.1")
+            for row in rows_iterator:
+                results.append(row)
+                if max_rows and len(results) >= max_rows:
+                    break
+            logger.info(f"DEBUG: Collected {len(results)} rows from iterator - v0.5.1")
 
         # Convert to dictionaries with proper serialization
         rows = []
-        for row in results:
-            row_dict = {}
-            for field in query_job.schema:
-                value = row[field.name]
-                row_dict[field.name] = _serialize_value(value)
-            rows.append(row_dict)
+        # Only process if we have both results and schema
+        if results and query_job.schema:
+            for row in results:
+                row_dict = {}
+                for field in query_job.schema:
+                    value = row[field.name]
+                    row_dict[field.name] = _serialize_value(value)
+                rows.append(row_dict)
 
         # Format results
         formatted_results = _format_query_results(rows, format)
@@ -257,17 +269,11 @@ def execute_query(
         response = {
             "status": "success",
             "row_count": len(rows),
-            "total_rows": (
-                query_job.total_rows if hasattr(query_job, "total_rows") else len(rows)
-            ),
+            "total_rows": (query_job.total_rows if hasattr(query_job, "total_rows") else len(rows)),
             "bytes_processed": query_job.total_bytes_processed,
             "bytes_billed": query_job.total_bytes_billed,
-            "cache_hit": (
-                query_job.cache_hit if hasattr(query_job, "cache_hit") else False
-            ),
-            "slot_millis": (
-                query_job.slot_millis if hasattr(query_job, "slot_millis") else None
-            ),
+            "cache_hit": (query_job.cache_hit if hasattr(query_job, "cache_hit") else False),
+            "slot_millis": (query_job.slot_millis if hasattr(query_job, "slot_millis") else None),
         }
 
         # Add results based on format
@@ -307,13 +313,11 @@ def execute_query(
         # Handle specific error types
         if "403" in error_str:
             raise QueryExecutionError(
-                f"Permission denied. Ensure you have bigquery.jobs.create permission "
-                f"and access to the referenced tables."
+                "Permission denied. Ensure you have bigquery.jobs.create permission "
+                "and access to the referenced tables."
             )
         elif "404" in error_str:
-            raise QueryExecutionError(
-                f"Table not found. Check the table references in your query."
-            )
+            raise QueryExecutionError("Table not found. Check the table references in your query.")
         elif "Syntax error" in error_str:
             raise QueryExecutionError(f"SQL syntax error: {error_str}")
         elif isinstance(e, TimeoutError) or "TimeoutError" in str(type(e)):

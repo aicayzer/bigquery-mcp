@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bigquery-mcp"
-version = "0.5.0"
+version = "0.5.1"
 description = "A Model Context Protocol server for BigQuery with cross-project support"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
@@ -17,31 +17,44 @@ markers = [
     "integration: Integration tests requiring BigQuery",
 ]
 
-[tool.black]
-line-length = 88
-target-version = ['py311']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.venv
-  | build
-  | dist
-  | \.eggs
-)/
-'''
+# Legacy black and flake8 configurations removed - using ruff instead
 
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203", "W503"]
-exclude = [".git", "__pycache__", "venv", ".venv", "build", "dist"]
+[tool.ruff]
+line-length = 100
+target-version = "py311"
 
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-ignore_missing_imports = true
+[tool.ruff.lint]
+# Enable pycodestyle (`E`), Pyflakes (`F`), and import sorting (`I`)
+select = ["E", "F", "I"]
+
+# Ignore some specific rules
+ignore = [
+    "E501",  # Line too long (handled by line-length)
+    "E203",  # Whitespace before ':'
+    "E731",  # Do not assign a lambda expression, use a def (allow in tests)
+]
+
+# Exclude directories
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    ".mypy_cache",
+    ".pytest_cache",
+    "htmlcov",
+]
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Skip magic trailing comma (keep trailing commas)
+skip-magic-trailing-comma = false
+
+# Use 4-space indentation (default)
+indent-style = "space"
 
 [build-system]
 requires = ["poetry-core"]

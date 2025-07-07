@@ -1,17 +1,18 @@
 """Unit tests for analysis tools."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
+from unittest.mock import Mock
+
+import pytest
 from google.cloud.bigquery import SchemaField, Table
 
 from tools.analysis import (
     _classify_column,
-    analyze_table,
     analyze_columns,
+    analyze_table,
     register_analysis_tools,
 )
-from utils.errors import DatasetAccessError, QueryExecutionError
+from utils.errors import DatasetAccessError
 
 
 class TestColumnClassification:
@@ -204,9 +205,7 @@ class TestAnalyzeTable:
             }.get(key)
             mock_rows.append(mock_row)
 
-        mock_dependencies.bq_client.client.query.return_value.result = Mock(
-            return_value=mock_rows
-        )
+        mock_dependencies.bq_client.client.query.return_value.result = Mock(return_value=mock_rows)
 
         # Run analysis
         result = analyze_table("dataset.table")
@@ -241,9 +240,7 @@ class TestAnalyzeTable:
 
     def test_analyze_table_not_found(self, mock_dependencies):
         """Test table analysis with table not found."""
-        mock_dependencies.bq_client.client.get_table = Mock(
-            side_effect=Exception("404 Not found")
-        )
+        mock_dependencies.bq_client.client.get_table = Mock(side_effect=Exception("404 Not found"))
 
         with pytest.raises(DatasetAccessError) as exc_info:
             analyze_table("dataset.table")
@@ -441,9 +438,7 @@ class TestToolRegistration:
         mock_formatter = Mock()
 
         # Register tools
-        register_analysis_tools(
-            mock_mcp, mock_handler, mock_client, mock_config, mock_formatter
-        )
+        register_analysis_tools(mock_mcp, mock_handler, mock_client, mock_config, mock_formatter)
 
         # Verify tools were registered
         assert mock_mcp.tool.call_count == 2  # analyze_table and analyze_columns

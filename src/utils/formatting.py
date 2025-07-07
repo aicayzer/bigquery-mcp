@@ -1,11 +1,10 @@
 """Response formatting utilities for standard and compact modes."""
 
-import json
 import csv
 import io
-from typing import List, Dict, Any, Optional
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Any, Dict, List
 
 from config import get_config
 
@@ -45,10 +44,7 @@ class ResponseFormatter:
                     field_type = self._abbreviate_type(field_type)
 
                 # Include description only if configured
-                if (
-                    self.config.formatting.include_schema_descriptions
-                    and desc != "No description"
-                ):
+                if self.config.formatting.include_schema_descriptions and desc != "No description":
                     result[name] = f"{field_type} - {desc}"
                 else:
                     result[name] = field_type
@@ -62,9 +58,7 @@ class ResponseFormatter:
 
                 # Include description if configured
                 if self.config.formatting.include_schema_descriptions:
-                    formatted_field["description"] = field.get(
-                        "description", "No description"
-                    )
+                    formatted_field["description"] = field.get("description", "No description")
 
                 # Include mode if present
                 if "mode" in field:
@@ -145,9 +139,7 @@ class ResponseFormatter:
             # Standard mode: full information
             return table_info
 
-    def format_column_analysis(
-        self, analysis: Dict[str, Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def format_column_analysis(self, analysis: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
         Format column analysis results.
 

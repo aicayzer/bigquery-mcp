@@ -6,7 +6,7 @@ A Model Context Protocol server that provides secure, cross-project access to Bi
 
 - **Cross-Project Access** - Query data across multiple BigQuery projects with a single connection
 - **Advanced Analytics** - Column-level analysis for nulls, cardinality, and data quality
-- **Token Optimization** - Compact response formats designed for LLM efficiency  
+- **Token Optimization** - Compact response formats designed for LLM efficiency
 - **Safety Controls** - SQL validation, query limits, and read-only operations
 - **Flexible Configuration** - YAML-based project and dataset access control
 
@@ -64,29 +64,9 @@ docker run --rm bigquery-mcp python --version
 docker-compose up --build
 ```
 
-#### Claude MCP Configuration (Docker)
+#### Cursor IDE Integration
 
-After building the Docker image, add this to your Claude MCP configuration:
-
-```json
-{
-  "mcpServers": {
-    "bigquery": {
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-v", "/path/to/your/bigquery-mcp/config:/app/config:ro",
-        "-v", "/path/to/your/service-account.json:/app/credentials/service-account.json:ro",
-        "-e", "GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account.json",
-        "bigquery-mcp"
-      ],
-      "env": {}
-    }
-  }
-}
-```
-
-Replace `/path/to/your/bigquery-mcp/config` with the absolute path to your config directory and `/path/to/your/service-account.json` with your GCP service account key file.
+For detailed setup instructions with Cursor IDE using Docker, see [docs/cursor-mcp-setup.md](docs/cursor-mcp-setup.md).
 
 ## Configuration
 
@@ -95,15 +75,15 @@ Replace `/path/to/your/bigquery-mcp/config` with the absolute path to your confi
 ```yaml
 bigquery:
   billing_project: "your-billing-project"
-  
+
 projects:
   - project_id: "analytics-prod"
     project_name: "Analytics Production"
     description: "Main data warehouse"
     datasets: ["prod_*", "reporting_*"]
-    
+
   - project_id: "raw-data"
-    project_name: "Raw Data Lake" 
+    project_name: "Raw Data Lake"
     datasets: ["*"]  # Allow all datasets
 
 limits:

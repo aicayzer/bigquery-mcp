@@ -1,18 +1,19 @@
 """Unit tests for execution tools."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 from decimal import Decimal
+from unittest.mock import Mock
+
+import pytest
 
 from tools.execution import (
-    _validate_query_safety,
     _format_query_results,
     _serialize_value,
+    _validate_query_safety,
     execute_query,
     register_execution_tools,
 )
-from utils.errors import SecurityError, QueryExecutionError, SQLValidationError
+from utils.errors import QueryExecutionError, SecurityError
 
 
 class TestQueryValidation:
@@ -195,13 +196,21 @@ class TestExecuteQuery:
 
     def test_execute_simple_query(self, mock_dependencies):
         """Test executing a simple SELECT query."""
-        from datetime import datetime, timedelta
+        from datetime import datetime
 
         # Mock query job
         mock_job = Mock()
-        mock_job.result = Mock(
-            return_value=[Mock(id=1, name="Alice"), Mock(id=2, name="Bob")]
-        )
+
+        # Create mock rows
+        mock_rows = [Mock(id=1, name="Alice"), Mock(id=2, name="Bob")]
+
+        # Create mock RowIterator
+        mock_row_iterator = Mock()
+        mock_row_iterator.__iter__ = Mock(return_value=iter(mock_rows))
+
+        # result() should return the RowIterator
+        mock_job.result = Mock(return_value=mock_row_iterator)
+
         mock_job.total_bytes_processed = 1024
         mock_job.total_bytes_billed = 1024
         mock_job.cache_hit = True
@@ -224,12 +233,12 @@ class TestExecuteQuery:
 
         mock_job.schema = [MockField, MockField2]
 
-        # Configure the mock to allow item access
-        mock_job.result.return_value[0].__getitem__ = lambda self, key: {
+        # Configure the mock rows to allow item access
+        mock_rows[0].__getitem__ = lambda self, key: {
             "id": 1,
             "name": "Alice",
         }[key]
-        mock_job.result.return_value[1].__getitem__ = lambda self, key: {
+        mock_rows[1].__getitem__ = lambda self, key: {
             "id": 2,
             "name": "Bob",
         }[key]
@@ -254,7 +263,10 @@ class TestExecuteQuery:
         from datetime import datetime
 
         mock_job = Mock()
-        mock_job.result = Mock(return_value=[])
+        # Create empty mock RowIterator
+        mock_row_iterator = Mock()
+        mock_row_iterator.__iter__ = Mock(return_value=iter([]))
+        mock_job.result = Mock(return_value=mock_row_iterator)
         mock_job.schema = []
         mock_job.created = datetime(2024, 1, 1, 10, 0, 0)
         mock_job.ended = datetime(2024, 1, 1, 10, 0, 1)
@@ -293,7 +305,10 @@ class TestExecuteQuery:
         from datetime import datetime
 
         mock_job = Mock()
-        mock_job.result = Mock(return_value=[])
+        # Create empty mock RowIterator
+        mock_row_iterator = Mock()
+        mock_row_iterator.__iter__ = Mock(return_value=iter([]))
+        mock_job.result = Mock(return_value=mock_row_iterator)
         mock_job.schema = []
         mock_job.created = datetime(2024, 1, 1, 10, 0, 0)
         mock_job.ended = datetime(2024, 1, 1, 10, 0, 2)
@@ -308,7 +323,7 @@ class TestExecuteQuery:
 
         # Verify query was executed with parameters
         call_args = mock_dependencies.bq_client.client.query.call_args
-        query = call_args[0][0]
+        # query = call_args[0][0]  # Query content not needed for this test
         job_config = call_args[1]["job_config"]
         # Check that a job config was passed (parameters would be set there)
         assert job_config is not None
@@ -319,9 +334,20 @@ class TestExecuteQuery:
 
         # Mock simple results
         mock_job = Mock()
-        mock_job.result = Mock(
-            return_value=[Mock(id=1, value=10.5), Mock(id=2, value=20.0)]
-        )
+
+        # Create mock rows
+        mock_rows = [Mock(id=1, value=10.5), Mock(id=2, value=20.0)]
+
+        # Create mock RowIterator
+        mock_row_iterator = Mock()
+        mock_row_iterator.__iter__ = Mock(return_value=iter(mock_rows))
+        mock_job.result = Mock(return_value=mock_row_iterator)
+
+        # Add required attributes
+        mock_job.total_bytes_processed = 1024
+        mock_job.total_bytes_billed = 1024
+        mock_job.cache_hit = False
+        mock_job.total_rows = 2
         mock_job.created = datetime(2024, 1, 1, 10, 0, 0)
         mock_job.ended = datetime(2024, 1, 1, 10, 0, 3)
 
@@ -338,11 +364,13 @@ class TestExecuteQuery:
         MockField2.description = ""
 
         mock_job.schema = [MockField, MockField2]
-        mock_job.result.return_value[0].__getitem__ = lambda self, key: {
+
+        # Configure mock rows to allow item access
+        mock_rows[0].__getitem__ = lambda self, key: {
             "id": 1,
             "value": 10.5,
         }[key]
-        mock_job.result.return_value[1].__getitem__ = lambda self, key: {
+        mock_rows[1].__getitem__ = lambda self, key: {
             "id": 2,
             "value": 20.0,
         }[key]
@@ -359,9 +387,7 @@ class TestExecuteQuery:
 
     def test_execute_query_permission_denied(self, mock_dependencies):
         """Test handling of permission errors."""
-        mock_dependencies.bq_client.client.query = Mock(
-            side_effect=Exception("403 Access Denied")
-        )
+        mock_dependencies.bq_client.client.query = Mock(side_effect=Exception("403 Access Denied"))
 
         with pytest.raises(QueryExecutionError) as exc_info:
             execute_query("SELECT * FROM table")
@@ -394,9 +420,7 @@ class TestToolRegistration:
         mock_formatter = Mock()
 
         # Register tools
-        register_execution_tools(
-            mock_mcp, mock_handler, mock_client, mock_config, mock_formatter
-        )
+        register_execution_tools(mock_mcp, mock_handler, mock_client, mock_config, mock_formatter)
 
         # Verify tools were registered (only execute_query exists)
         assert mock_mcp.tool.call_count == 1

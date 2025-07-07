@@ -5,7 +5,7 @@ in production deployments.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -88,9 +88,7 @@ def health_check() -> Dict[str, Any]:
 
     try:
         # Test BigQuery access by listing datasets in billing project
-        datasets = list(
-            bq_client.client.list_datasets(bq_client.billing_project, max_results=1)
-        )
+        list(bq_client.client.list_datasets(bq_client.billing_project, max_results=1))
         health["checks"]["bigquery_access"] = "ok"
         health["checks"]["location"] = bq_client.client.location
     except Exception as e:

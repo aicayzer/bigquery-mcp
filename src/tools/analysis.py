@@ -1,11 +1,11 @@
 """Analysis tools for table and column profiling."""
 
 import logging
-from typing import Dict, Any, List, Optional, Tuple
-from collections import defaultdict
+from typing import Any, Dict
 
 from google.cloud.bigquery import QueryJobConfig
-from utils.errors import DatasetAccessError, QueryExecutionError
+
+from utils.errors import DatasetAccessError
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,7 @@ def _ensure_initialized():
         )
 
 
-def _build_analyze_query(
-    project: str, dataset: str, table: str, sample_size: int = 1000
-) -> str:
+def _build_analyze_query(project: str, dataset: str, table: str, sample_size: int = 1000) -> str:
     """Build optimized query for table analysis.
 
     Creates a query that efficiently samples data for analysis while
@@ -42,7 +40,7 @@ def _build_analyze_query(
         TABLESAMPLE SYSTEM ({sample_size} ROWS)
     ),
     column_stats AS (
-        SELECT 
+        SELECT
             '{project}' as project_id,
             '{dataset}' as dataset_id,
             '{table}' as table_id,
@@ -60,7 +58,7 @@ def _build_analyze_query(
         FROM sampled_data t,
         UNNEST(
             ARRAY(
-                SELECT AS STRUCT 
+                SELECT AS STRUCT
                     column_name,
                     data_type,
                     CAST(TO_JSON_STRING(EXTRACT(JSON_VALUE FROM TO_JSON_STRING(t) AT '$.' || column_name)) AS STRING) as value
@@ -101,9 +99,7 @@ def _classify_column(
         or name_lower == "id"
     ):
         classification["category"] = "identifier"
-        classification["likely_primary_key"] = (
-            null_ratio == 0 and cardinality == sample_size
-        )
+        classification["likely_primary_key"] = null_ratio == 0 and cardinality == sample_size
 
     # Date/time detection
     elif data_type in ["TIMESTAMP", "DATETIME", "DATE", "TIME"]:
@@ -178,9 +174,7 @@ def analyze_table(table: str) -> Dict[str, Any]:
             project = bq_client.billing_project
             dataset, table_id = parts
         else:
-            raise ValueError(
-                "Invalid table path. Use 'project.dataset.table' or 'dataset.table'"
-            )
+            raise ValueError("Invalid table path. Use 'project.dataset.table' or 'dataset.table'")
 
         # Validate access
         if not config.is_dataset_allowed(project, dataset):
@@ -218,12 +212,10 @@ def analyze_table(table: str) -> Dict[str, Any]:
             ]
             distinct_count = len(set(str(v) for v in non_null_values))
 
-            null_ratio = (
-                null_count / actual_sample_size if actual_sample_size > 0 else 0
-            )
+            null_ratio = null_count / actual_sample_size if actual_sample_size > 0 else 0
 
-            # Classify column
-            classification = _classify_column(
+            # Classify column (classification available for future use)
+            _classify_column(
                 field.name,
                 field.field_type,
                 null_ratio,
@@ -262,9 +254,7 @@ def analyze_table(table: str) -> Dict[str, Any]:
 
             # Add partitioning info if present
             if table_ref.time_partitioning:
-                response["partitioned_by"] = (
-                    table_ref.time_partitioning.field or "_PARTITIONTIME"
-                )
+                response["partitioned_by"] = table_ref.time_partitioning.field or "_PARTITIONTIME"
 
         else:
             # Full format with comprehensive details
@@ -277,12 +267,8 @@ def analyze_table(table: str) -> Dict[str, Any]:
                     "full_path": f"{project}.{dataset}.{table_id}",
                 },
                 "metadata": {
-                    "created": (
-                        table_ref.created.isoformat() if table_ref.created else None
-                    ),
-                    "modified": (
-                        table_ref.modified.isoformat() if table_ref.modified else None
-                    ),
+                    "created": (table_ref.created.isoformat() if table_ref.created else None),
+                    "modified": (table_ref.modified.isoformat() if table_ref.modified else None),
                     "description": table_ref.description or "",
                     "labels": table_ref.labels or {},
                     "location": table_ref.location,
@@ -291,9 +277,7 @@ def analyze_table(table: str) -> Dict[str, Any]:
                     "total_rows": table_ref.num_rows,
                     "total_bytes": table_ref.num_bytes,
                     "size_mb": round((table_ref.num_bytes or 0) / (1024 * 1024), 2),
-                    "size_gb": round(
-                        (table_ref.num_bytes or 0) / (1024 * 1024 * 1024), 2
-                    ),
+                    "size_gb": round((table_ref.num_bytes or 0) / (1024 * 1024 * 1024), 2),
                 },
                 "structure": {
                     "column_count": len(table_ref.schema),
@@ -314,17 +298,14 @@ def analyze_table(table: str) -> Dict[str, Any]:
 
             # Add clustering details if present
             if table_ref.clustering_fields:
-                response["structure"]["clustering"] = {
-                    "fields": table_ref.clustering_fields
-                }
+                response["structure"]["clustering"] = {"fields": table_ref.clustering_fields}
 
         return response
 
     except Exception as e:
         if "404" in str(e):
             raise DatasetAccessError(
-                f"Table not found: {table}. "
-                "Please check the table path and ensure you have access."
+                f"Table not found: {table}. Please check the table path and ensure you have access."
             )
         raise
 
@@ -365,9 +346,7 @@ def analyze_columns(
             project = bq_client.billing_project
             dataset, table_id = parts
         else:
-            raise ValueError(
-                "Invalid table path. Use 'project.dataset.table' or 'dataset.table'"
-            )
+            raise ValueError("Invalid table path. Use 'project.dataset.table' or 'dataset.table'")
 
         # Validate access
         if not config.is_dataset_allowed(project, dataset):
@@ -381,19 +360,13 @@ def analyze_columns(
         # Determine columns to analyze
         if columns:
             # Parse comma-separated column names
-            columns_to_analyze = [
-                col.strip() for col in columns.split(",") if col.strip()
-            ]
+            columns_to_analyze = [col.strip() for col in columns.split(",") if col.strip()]
 
             # Validate requested columns exist
             schema_fields = {field.name: field for field in table_ref.schema}
-            invalid_columns = [
-                col for col in columns_to_analyze if col not in schema_fields
-            ]
+            invalid_columns = [col for col in columns_to_analyze if col not in schema_fields]
             if invalid_columns:
-                raise ValueError(
-                    f"Columns not found in table: {', '.join(invalid_columns)}"
-                )
+                raise ValueError(f"Columns not found in table: {', '.join(invalid_columns)}")
         else:
             # Analyze all columns
             columns_to_analyze = [field.name for field in table_ref.schema]
@@ -455,7 +428,7 @@ def analyze_columns(
                     FROM sample_data
                 ),
                 value_counts AS (
-                    SELECT 
+                    SELECT
                         {col_name} as value,
                         COUNT(*) as count
                     FROM sample_data
@@ -536,11 +509,7 @@ def analyze_columns(
                     "cardinality": {
                         "distinct_count": distinct_count,
                         "distinct_percentage": round(
-                            (
-                                (distinct_count / total_count * 100)
-                                if total_count > 0
-                                else 0
-                            ),
+                            ((distinct_count / total_count * 100) if total_count > 0 else 0),
                             2,
                         ),
                         "is_unique": distinct_count == total_count and total_count > 0,
@@ -552,19 +521,13 @@ def analyze_columns(
                 if field.field_type in ["INT64", "FLOAT64", "NUMERIC", "BIGNUMERIC"]:
                     col_analysis["numeric_stats"] = {
                         "min": (
-                            float(results.min_value)
-                            if results.min_value is not None
-                            else None
+                            float(results.min_value) if results.min_value is not None else None
                         ),
                         "max": (
-                            float(results.max_value)
-                            if results.max_value is not None
-                            else None
+                            float(results.max_value) if results.max_value is not None else None
                         ),
                         "avg": (
-                            float(results.avg_value)
-                            if results.avg_value is not None
-                            else None
+                            float(results.avg_value) if results.avg_value is not None else None
                         ),
                         "stddev": (
                             float(results.stddev_value)
@@ -606,40 +569,31 @@ def analyze_columns(
                     col_analysis["string_stats"] = {
                         "min_length": results.min_length,
                         "max_length": results.max_length,
-                        "avg_length": (
-                            round(results.avg_length, 2) if results.avg_length else 0
-                        ),
+                        "avg_length": (round(results.avg_length, 2) if results.avg_length else 0),
                     }
 
-                    if (
-                        hasattr(results, "top_values")
-                        and results.top_values
-                        and include_examples
-                    ):
+                    if hasattr(results, "top_values") and results.top_values and include_examples:
                         col_analysis["top_values"] = [
                             {
-                                "value": item.value,
-                                "count": item.count,
-                                "percentage": round(item.count / total_count * 100, 2),
+                                "value": item["value"] if isinstance(item, dict) else item.value,
+                                "count": item["count"] if isinstance(item, dict) else item.count,
+                                "percentage": round(
+                                    (item["count"] if isinstance(item, dict) else item.count)
+                                    / total_count
+                                    * 100,
+                                    2,
+                                ),
                             }
                             for item in results.top_values
-                            if item.value is not None
-                        ][
-                            :10
-                        ]  # Limit to top 10
+                            if (item["value"] if isinstance(item, dict) else item.value) is not None
+                        ][:10]  # Limit to top 10
 
                 elif field.field_type in ["DATE", "DATETIME", "TIMESTAMP"]:
                     col_analysis["temporal_stats"] = {
-                        "min_value": (
-                            str(results.min_value) if results.min_value else None
-                        ),
-                        "max_value": (
-                            str(results.max_value) if results.max_value else None
-                        ),
+                        "min_value": (str(results.min_value) if results.min_value else None),
+                        "max_value": (str(results.max_value) if results.max_value else None),
                         "range_days": (
-                            results.range_days
-                            if hasattr(results, "range_days")
-                            else None
+                            results.range_days if hasattr(results, "range_days") else None
                         ),
                     }
 
@@ -713,8 +667,7 @@ def analyze_columns(
     except Exception as e:
         if "404" in str(e):
             raise DatasetAccessError(
-                f"Table not found: {table}. "
-                "Please check the table path and ensure you have access."
+                f"Table not found: {table}. Please check the table path and ensure you have access."
             )
         raise
 

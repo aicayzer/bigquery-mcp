@@ -1,20 +1,19 @@
 """Main server entry point for BigQuery MCP."""
 
+import functools
+import logging
 import os
 import sys
-import logging
-import functools
 from pathlib import Path
-from typing import Dict, Any, Optional
 
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fastmcp import FastMCP
 from dotenv import load_dotenv
+from fastmcp import FastMCP
 
-from config import get_config
 from client import BigQueryClient
+from config import get_config
 from utils.errors import BigQueryMCPError
 from utils.formatting import ResponseFormatter
 
@@ -30,7 +29,7 @@ try:
     logs_dir = script_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
     log_file = logs_dir / "bigquery_mcp.log"
-except Exception as e:
+except Exception:
     # Fallback to temp directory if we can't create logs dir
     import tempfile
 
@@ -72,9 +71,7 @@ def initialize_server():
         # Initialize formatter
         formatter = ResponseFormatter(config)
 
-        logger.info(
-            f"Server initialized: {config.server_name} v{config.server_version}"
-        )
+        logger.info(f"Server initialized: {config.server_name} v{config.server_version}")
         logger.info(f"Billing project: {bq_client.billing_project}")
         logger.info(f"Allowed projects: {', '.join(config.get_allowed_projects())}")
 
@@ -116,20 +113,14 @@ def main():
         initialize_server()
 
         # Import and register tools
-        import tools.discovery
         import tools.analysis
-        import tools.execution
         import tools.development
+        import tools.discovery
+        import tools.execution
 
-        tools.discovery.register_discovery_tools(
-            mcp, handle_error, bq_client, config, formatter
-        )
-        tools.analysis.register_analysis_tools(
-            mcp, handle_error, bq_client, config, formatter
-        )
-        tools.execution.register_execution_tools(
-            mcp, handle_error, bq_client, config, formatter
-        )
+        tools.discovery.register_discovery_tools(mcp, handle_error, bq_client, config, formatter)
+        tools.analysis.register_analysis_tools(mcp, handle_error, bq_client, config, formatter)
+        tools.execution.register_execution_tools(mcp, handle_error, bq_client, config, formatter)
         tools.development.register_development_tools(
             mcp, handle_error, bq_client, config, formatter
         )
