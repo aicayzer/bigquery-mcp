@@ -23,7 +23,7 @@ A production-ready Model Context Protocol server that provides secure, cross-pro
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/bigquery-mcp.git
+   git clone https://github.com/aicayzer/bigquery-mcp.git
    cd bigquery-mcp
    ```
 
@@ -79,8 +79,9 @@ The server provides 6 core tools for BigQuery interaction:
 
 ### Claude Desktop
 
-Add to your Claude Desktop configuration:
+For complete setup instructions with Claude Desktop (Docker and Python options), see the **[Claude Desktop Setup Guide](claude-desktop-setup.md)**.
 
+Quick configuration example:
 ```json
 {
   "mcpServers": {

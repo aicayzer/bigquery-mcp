@@ -5,6 +5,9 @@ site_url: https://github.com/aicayzer/bigquery-mcp
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Setup Guides:
+    - Claude Desktop: claude-desktop-setup.md
+    - Cursor IDE: cursor-mcp-setup.md
   - Tools Reference: tools.md
   - Configuration: configuration.md
   - Development: development.md
@@ -36,5 +39,5 @@ markdown_extensions:
 plugins:
   - search
 
-repo_url: https://github.com/yourusername/bigquery-mcp
+repo_url: https://github.com/aicayzer/bigquery-mcp
 repo_name: bigquery-mcp

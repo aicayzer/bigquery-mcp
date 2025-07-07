@@ -571,12 +571,6 @@ def analyze_columns(
 
                 # Add type-specific analysis
                 if field.field_type in ["INT64", "FLOAT64", "NUMERIC", "BIGNUMERIC"]:
-                    # Handle both object and dictionary access
-                    min_val = _safe_get_value(results, "min_value")
-                    max_val = _safe_get_value(results, "max_value")
-                    avg_val = _safe_get_value(results, "avg_value")
-                    stddev_val = _safe_get_value(results, "stddev_value")
-
                     def safe_float(val):
                         """Safely convert to float, handling None and Mock objects."""
                         if val is None:
@@ -591,7 +585,7 @@ def analyze_columns(
                         except (TypeError, ValueError):
                             return None
 
- 
+
                     col_analysis["numeric_stats"] = {
                         "min": (
                             float(results.min_value) if results.min_value is not None else None
@@ -630,11 +624,6 @@ def analyze_columns(
                         }
 
                 elif field.field_type == "STRING":
-                    # Handle both object and dictionary access
-                    min_len = _safe_get_value(results, "min_length")
-                    max_len = _safe_get_value(results, "max_length")
-                    avg_len = _safe_get_value(results, "avg_length")
-
                     def safe_round(val, decimals=2):
                         """Safely round a value, handling None and Mock objects."""
                         if val is None:
@@ -672,11 +661,6 @@ def analyze_columns(
                         ][:10]  # Limit to top 10
 
                 elif field.field_type in ["DATE", "DATETIME", "TIMESTAMP"]:
-                    # Handle both object and dictionary access
-                    min_val = _safe_get_value(results, "min_value")
-                    max_val = _safe_get_value(results, "max_value")
-                    range_days = _safe_get_value(results, "range_days")
-
                     col_analysis["temporal_stats"] = {
                         "min_value": (str(results.min_value) if results.min_value else None),
                         "max_value": (str(results.max_value) if results.max_value else None),
