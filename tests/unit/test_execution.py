@@ -79,7 +79,7 @@ class TestQueryValidation:
         """Test rejection of non-SELECT queries."""
         with pytest.raises(SecurityError) as exc_info:
             _validate_query_safety("DESCRIBE dataset.table")
-        assert "Only SELECT statements are allowed" in str(exc_info.value)
+        assert "Only SELECT statements and CTEs (WITH) are allowed" in str(exc_info.value)
 
     def test_require_explicit_limits(self, mock_dependencies):
         """Test LIMIT requirement when configured."""

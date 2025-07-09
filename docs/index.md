@@ -102,7 +102,7 @@ For detailed setup instructions with Cursor IDE using Docker, see the [Cursor MC
 
 ## Security & Safety
 
-- **Read-only operations** - Only SELECT queries are allowed
+- **Read-only operations** - Only SELECT queries and CTEs (WITH clauses) are allowed
 - **SQL validation** - Configurable banned keywords and safety checks
 - **Query limits** - Row limits, timeouts, and byte processing limits
 - **Project isolation** - Access control via YAML configuration

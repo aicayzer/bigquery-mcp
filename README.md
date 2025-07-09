@@ -150,7 +150,7 @@ For detailed development setup, see the [Development Guide](docs/development.md)
 
 ## Security & Safety
 
-- **Read-only operations** - Only SELECT queries are allowed
+- **Read-only operations** - Only SELECT queries and CTEs (WITH clauses) are allowed
 - **SQL validation** - Configurable banned keywords and safety checks
 - **Query limits** - Row limits, timeouts, and byte processing limits
 - **Project isolation** - Access control via YAML configuration

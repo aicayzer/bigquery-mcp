@@ -109,7 +109,7 @@ security:
 
 - **`banned_sql_keywords`**: SQL keywords that will cause query rejection
 - **`require_explicit_limits`**: If true, all SELECT queries must include LIMIT clause
-- **`select_only`**: If true, only SELECT statements are allowed (recommended)
+- **`select_only`**: If true, only SELECT statements and CTEs (WITH clauses) are allowed (recommended)
 
 ### Formatting Section
 
