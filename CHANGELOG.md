@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [LATEST]
 
+### Fixed
+- CTE (Common Table Expression) queries now work correctly - fixed validation issue where WITH statements were incorrectly rejected
+- Improved error messages for SQL validation to clarify that CTEs are supported
+
+### Added
+- Comprehensive unit tests for SQL validation including CTE support
+
 ## [1.0.0] - 2025-01-07
 
 ### Added

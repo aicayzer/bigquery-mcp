@@ -82,8 +82,22 @@ class SQLValidator:
 
             # Get the statement type
             stmt_type = statement.get_type()
+
+            # Handle CTEs: sqlparse returns "UNKNOWN" for WITH statements
+            # Check if it's a CTE by looking at the actual SQL
+            sql_normalized = sql.strip().upper()
+            if stmt_type == "UNKNOWN" and sql_normalized.startswith("WITH"):
+                # This is a CTE (Common Table Expression) - allowed
+                return
+
             if stmt_type != "SELECT":
-                raise SQLValidationError(f"Only SELECT statements are allowed, got: {stmt_type}")
+                if sql_normalized.startswith("WITH"):
+                    # CTE should be allowed
+                    return
+                else:
+                    raise SQLValidationError(
+                        f"Only SELECT statements and CTEs (WITH) are allowed, got: {stmt_type}"
+                    )
 
         except SQLValidationError:
             raise
@@ -91,8 +105,8 @@ class SQLValidator:
             logger.warning(f"Failed to parse SQL for validation: {e}")
             # Fall back to simple check
             sql_normalized = sql.strip().upper()
-            if not sql_normalized.startswith("SELECT"):
-                raise SQLValidationError("Only SELECT statements are allowed")
+            if not sql_normalized.startswith("SELECT") and not sql_normalized.startswith("WITH"):
+                raise SQLValidationError("Only SELECT statements and CTEs (WITH) are allowed")
 
     def _validate_has_limit(self, sql: str) -> None:
         """Check if query has a LIMIT clause."""
