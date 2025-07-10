@@ -45,10 +45,19 @@ def _validate_query_safety(query: str) -> None:
         raise SecurityError(str(e))
 
     # Additional safety checks specific to execution
-    query_upper = query.upper().strip()
+    # Remove comments and normalize the query to check if it's SELECT/WITH
+    import re
+
+    query_normalized = query.strip()
+    # Remove single-line comments (-- comments)
+    query_normalized = re.sub(r"--.*?(?=\n|$)", "", query_normalized, flags=re.MULTILINE)
+    # Remove multi-line comments (/* comments */)
+    query_normalized = re.sub(r"/\*.*?\*/", "", query_normalized, flags=re.DOTALL)
+    # Remove extra whitespace and get first significant token
+    query_normalized = query_normalized.strip().upper()
 
     # Ensure it's a SELECT query (WITH is allowed for CTEs)
-    if not query_upper.startswith("SELECT") and not query_upper.startswith("WITH"):
+    if not query_normalized.startswith("SELECT") and not query_normalized.startswith("WITH"):
         raise SecurityError("Only SELECT queries are allowed")
 
 

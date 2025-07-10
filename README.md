@@ -57,6 +57,10 @@ A production-ready Model Context Protocol server that provides secure, cross-pro
 ```bash
 # Build and run with Docker Compose
 docker-compose up --build
+
+# Alternatively, force rebuild without cache
+docker-compose build --no-cache
+docker-compose up
 ```
 
 ## Available Tools
