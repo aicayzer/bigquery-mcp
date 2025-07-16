@@ -370,6 +370,19 @@ def analyze_columns(
     logger.info(f"Analyzing columns in table: {table}")
 
     try:
+        # Convert sample_size to int if needed (for MCP compatibility)
+        if isinstance(sample_size, str):
+            try:
+                sample_size = int(sample_size)
+            except ValueError:
+                raise ValueError(f"sample_size must be an integer, got: {sample_size}")
+        elif isinstance(sample_size, float):
+            sample_size = int(sample_size)
+        elif not isinstance(sample_size, int):
+            raise ValueError(f"sample_size must be an integer, got type: {type(sample_size)}")
+
+        # Ensure reasonable bounds
+        sample_size = max(100, min(sample_size, 50000))  # Between 100 and 50K
         # Parse table path
         parts = table.split(".")
         if len(parts) == 3:
@@ -419,12 +432,13 @@ def analyze_columns(
 
             # Build column-specific analysis query
             if field.field_type in ["INT64", "FLOAT64", "NUMERIC", "BIGNUMERIC"]:
-                # Numeric analysis
+                # Numeric analysis with SAFE functions to prevent failures
                 analysis_query = f"""
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    WHERE RAND() < {sample_ratio}
+                    WHERE {col_name} IS NOT NULL 
+                    AND RAND() < {sample_ratio}
                     LIMIT {sample_size}
                 )
                 SELECT
@@ -432,21 +446,22 @@ def analyze_columns(
                     COUNT(*) as total_count,
                     COUNTIF({col_name} IS NULL) as null_count,
                     COUNT(DISTINCT {col_name}) as distinct_count,
-                    MIN({col_name}) as min_value,
-                    MAX({col_name}) as max_value,
-                    AVG({col_name}) as avg_value,
-                    STDDEV({col_name}) as stddev_value,
+                    SAFE.MIN({col_name}) as min_value,
+                    SAFE.MAX({col_name}) as max_value,
+                    SAFE.AVG({col_name}) as avg_value,
+                    SAFE.STDDEV({col_name}) as stddev_value,
                     APPROX_QUANTILES({col_name}, 4) as quartiles
                 FROM sample_data
                 """
 
             elif field.field_type == "STRING":
-                # String analysis - simplified query without problematic JOIN
+                # String analysis - simplified query with better null handling
                 analysis_query = f"""
                 WITH sample_data AS (
                     SELECT {col_name}
                     FROM `{project}.{dataset}.{table_id}`
-                    WHERE RAND() < {sample_ratio}
+                    WHERE {col_name} IS NOT NULL 
+                    AND RAND() < {sample_ratio}
                     LIMIT {sample_size}
                 ),
                 basic_stats AS (
@@ -454,9 +469,9 @@ def analyze_columns(
                         COUNT(*) as total_count,
                         COUNTIF({col_name} IS NULL) as null_count,
                         COUNT(DISTINCT {col_name}) as distinct_count,
-                        MIN(LENGTH({col_name})) as min_length,
-                        MAX(LENGTH({col_name})) as max_length,
-                        AVG(LENGTH({col_name})) as avg_length
+                        SAFE.MIN(LENGTH({col_name})) as min_length,
+                        SAFE.MAX(LENGTH({col_name})) as max_length,
+                        SAFE.AVG(LENGTH({col_name})) as avg_length
                     FROM sample_data
                 ),
                 value_counts AS (
@@ -464,7 +479,7 @@ def analyze_columns(
                         {col_name} as value,
                         COUNT(*) as count
                     FROM sample_data
-                    WHERE {col_name} IS NOT NULL
+                    WHERE {col_name} IS NOT NULL AND {col_name} != ''
                     GROUP BY {col_name}
                     ORDER BY count DESC
                     LIMIT 20
@@ -513,15 +528,30 @@ def analyze_columns(
                 FROM sample_data
                 """
 
-            # Run analysis query
+            # Run analysis query with retry logic
             try:
                 query_job = bq_client.client.query(
-                    analysis_query, job_config=QueryJobConfig(use_query_cache=True)
+                    analysis_query,
+                    job_config=QueryJobConfig(
+                        use_query_cache=True,
+                        job_timeout_ms=60000,  # 60 second timeout
+                    ),
                 )
-                query_results = list(query_job.result())
+                query_results = list(query_job.result(timeout=60))
 
                 if not query_results:
                     logger.warning(f"No results returned for column {col_name}")
+                    # Add basic fallback analysis
+                    column_analyses.append(
+                        {
+                            "column_name": col_name,
+                            "data_type": field.field_type,
+                            "mode": field.mode,
+                            "description": field.description or "",
+                            "status": "no_data",
+                            "error": "Query returned no results",
+                        }
+                    )
                     continue
 
                 results = query_results[0]
@@ -678,11 +708,19 @@ def analyze_columns(
 
             except Exception as e:
                 logger.warning(f"Failed to analyze column {col_name}: {e}")
+                # Provide more detailed fallback analysis
                 column_analyses.append(
                     {
                         "column_name": col_name,
                         "data_type": field.field_type,
+                        "mode": field.mode,
+                        "description": field.description or "",
+                        "status": "analysis_failed",
                         "error": str(e),
+                        "basic_info": {
+                            "nullable": field.mode != "REQUIRED",
+                            "repeated": field.mode == "REPEATED",
+                        },
                     }
                 )
 

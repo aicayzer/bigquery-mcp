@@ -57,6 +57,10 @@ A production-ready Model Context Protocol server that provides secure, cross-pro
 ```bash
 # Build and run with Docker Compose
 docker-compose up --build
+
+# Alternatively, force rebuild without cache
+docker-compose build --no-cache
+docker-compose up
 ```
 
 ## Available Tools
@@ -135,6 +139,26 @@ pytest tests/unit/test_discovery.py
 ```
 
 ## Development
+
+### Development Environment
+
+For ongoing development and testing, you can set up a separate development MCP server:
+
+```bash
+# Set up development environment
+./setup-dev.sh
+
+# Start development server
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+This gives you:
+- Separate development MCP server alongside production
+- Debug logging and enhanced error messages  
+- Independent configuration for development projects
+- Easy testing of latest changes without affecting production
+
+See the **[Development Environment Guide](docs/development-environment.md)** for complete setup instructions.
 
 ### Code Quality
 
