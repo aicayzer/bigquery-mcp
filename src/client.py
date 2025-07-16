@@ -84,6 +84,33 @@ class BigQueryClient:
         """Get the billing project ID."""
         return self.client.project
 
+    def get_context_info(self) -> dict:
+        """
+        Get current context information for better user experience.
+
+        Returns:
+            Dict with current project/dataset context and available resources
+        """
+        context = {
+            "billing_project": self.billing_project,
+            "allowed_projects": list(self.config.allowed_projects)
+            if self.config.allowed_projects
+            else ["all"],
+            "allowed_datasets": list(self.config.allowed_datasets)
+            if self.config.allowed_datasets
+            else ["all"],
+            "last_accessed": {"project": self._last_project, "dataset": self._last_dataset},
+            "location": self.config.location,
+        }
+        return context
+
+    def update_context(self, project: str = None, dataset: str = None) -> None:
+        """Update the context tracking for better UX."""
+        if project:
+            self._last_project = project
+        if dataset:
+            self._last_dataset = dataset
+
     def parse_table_path(self, table_path: str) -> Tuple[str, str, str]:
         """
         Parse table path into project, dataset, and table components.
@@ -129,6 +156,9 @@ class BigQueryClient:
                 f"Dataset '{dataset}' not allowed in project '{project}'. "
                 f"Allowed patterns: {patterns}"
             )
+
+        # Update context tracking
+        self.update_context(project=project, dataset=dataset)
 
         return project, dataset, table
 

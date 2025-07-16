@@ -114,6 +114,7 @@ def main():
 
         # Import and register tools
         import tools.analysis
+        import tools.context
         import tools.development
         import tools.discovery
         import tools.execution
@@ -124,6 +125,7 @@ def main():
         tools.development.register_development_tools(
             mcp, handle_error, bq_client, config, formatter
         )
+        tools.context.register_context_tools(mcp, bq_client)
 
         # Verify tool registration
         registered_tools = [tool.name for tool in mcp.tools]

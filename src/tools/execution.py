@@ -3,6 +3,7 @@
 import csv
 import io
 import logging
+import time as time_module
 from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
@@ -120,7 +121,7 @@ def _serialize_value(value: Any) -> Any:
     elif isinstance(value, list):
         # Filter out None values to prevent BigQuery array NULL element errors
         return [_serialize_value(v) for v in value if v is not None]
-    elif hasattr(value, '__dict__'):
+    elif hasattr(value, "__dict__"):
         # Handle BigQuery custom objects
         return str(value)
     else:
@@ -176,7 +177,7 @@ def execute_query(
                 max_rows = int(max_rows)
             elif not isinstance(max_rows, int):
                 raise ValueError(f"max_rows must be an integer, got type: {type(max_rows)}")
-            
+
             max_rows = min(max_rows, config.limits.max_row_limit)
 
         if timeout is None:
@@ -192,7 +193,7 @@ def execute_query(
                 timeout = int(timeout)
             elif not isinstance(timeout, int):
                 raise ValueError(f"timeout must be an integer, got type: {type(timeout)}")
-            
+
             timeout = min(timeout, config.limits.max_query_timeout)
 
         # Add LIMIT if not present and not dry run
@@ -232,15 +233,17 @@ def execute_query(
 
         # Handle dry run
         if dry_run:
-            total_bytes = getattr(query_job, 'total_bytes_processed', 0) or 0
-            total_billed = getattr(query_job, 'total_bytes_billed', 0) or 0
-            
+            total_bytes = getattr(query_job, "total_bytes_processed", 0) or 0
+            total_billed = getattr(query_job, "total_bytes_billed", 0) or 0
+
             return {
                 "status": "success",
                 "dry_run": True,
                 "total_bytes_processed": total_bytes,
                 "total_bytes_billed": total_billed,
-                "estimated_cost_usd": round((total_billed / 1e12) * 5.0, 4) if total_billed else 0.0,
+                "estimated_cost_usd": round((total_billed / 1e12) * 5.0, 4)
+                if total_billed
+                else 0.0,
                 "schema": (
                     [
                         {
@@ -250,14 +253,26 @@ def execute_query(
                         }
                         for field in query_job.schema
                     ]
-                    if hasattr(query_job, 'schema') and query_job.schema
+                    if hasattr(query_job, "schema") and query_job.schema
                     else []
                 ),
             }
 
-        # Get results with proper timeout handling
+        # Get results with proper timeout handling and progress tracking
+        logger.info(
+            f"Starting query execution (estimated complexity: {_estimate_query_complexity(query)})"
+        )
+
         # Wait for the query to complete and get the row iterator
-        rows_iterator = query_job.result(timeout=timeout)
+        try:
+            start_time = time_module.time()
+            rows_iterator = query_job.result(timeout=timeout)
+            execution_time = time_module.time() - start_time
+            logger.info(f"Query completed in {execution_time:.2f} seconds")
+        except Exception as e:
+            execution_time = time_module.time() - start_time
+            logger.error(f"Query failed after {execution_time:.2f} seconds: {e}")
+            raise
 
         # CRITICAL FIX: Get schema BEFORE consuming the iterator
         schema_fields = None
@@ -371,6 +386,44 @@ def execute_query(
         else:
             # For any other error, preserve the original message
             raise QueryExecutionError(f"Query execution failed: {error_str}")
+
+
+def _estimate_query_complexity(query: str) -> str:
+    """
+    Estimate query complexity for better timeout predictions.
+
+    Args:
+        query: SQL query string
+
+    Returns:
+        Complexity level as string
+    """
+    query_upper = query.upper()
+    complexity_score = 0
+
+    # Count complexity indicators
+    if "JOIN" in query_upper:
+        complexity_score += query_upper.count("JOIN") * 2
+    if "WINDOW" in query_upper or "OVER(" in query_upper:
+        complexity_score += 3
+    if "GROUP BY" in query_upper:
+        complexity_score += 1
+    if "ORDER BY" in query_upper:
+        complexity_score += 1
+    if "UNION" in query_upper:
+        complexity_score += 2
+    if "WITH" in query_upper:
+        complexity_score += query_upper.count("WITH")
+
+    # Classify complexity
+    if complexity_score == 0:
+        return "simple"
+    elif complexity_score <= 3:
+        return "moderate"
+    elif complexity_score <= 7:
+        return "complex"
+    else:
+        return "very_complex"
 
 
 def register_execution_tools(
