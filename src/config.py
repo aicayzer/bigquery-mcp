@@ -43,9 +43,9 @@ class SecurityConfig:
 class LimitsConfig:
     """Query and response limits configuration."""
 
-    default_row_limit: int = 20
+    default_limit: int = 20
     max_query_timeout: int = 60
-    max_row_limit: int = 10000
+    max_limit: int = 10000
     max_bytes_processed: int = 1073741824  # 1GB
 
 
@@ -54,8 +54,6 @@ class FormattingConfig:
     """Response formatting configuration."""
 
     compact_format: bool = False
-    include_schema_descriptions: bool = True
-    abbreviate_common_terms: bool = False
 
 
 class Config:
@@ -70,6 +68,78 @@ class Config:
         self._raw_config = self._load_yaml(config_path)
         self._parse_config()
         self._apply_env_overrides()
+
+    @classmethod
+    def from_cli_args(
+        cls,
+        project_patterns: Dict[str, List[str]],
+        billing_project: Optional[str] = None,
+        location: str = "EU",
+    ):
+        """Create configuration from command-line arguments."""
+        instance = cls.__new__(cls)
+        instance.config_path = None
+        instance._raw_config = {}
+
+        # Server info
+        instance.server_name = "BigQuery MCP Server"
+        instance.server_version = "1.1.0"
+
+        # BigQuery settings
+        instance.billing_project = billing_project or os.getenv("BIGQUERY_BILLING_PROJECT", "")
+        instance.service_account_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+        instance.location = location
+
+        # Projects from CLI patterns
+        instance.projects = []
+        for project_id, dataset_patterns in project_patterns.items():
+            instance.projects.append(
+                ProjectConfig(
+                    project_id=project_id,
+                    project_name=project_id,
+                    description=f"Project {project_id} (configured via CLI)",
+                    datasets=dataset_patterns,
+                )
+            )
+
+        # Default security settings
+        instance.security = SecurityConfig(
+            banned_sql_keywords=[
+                "CREATE",
+                "DELETE",
+                "DROP",
+                "TRUNCATE",
+                "INSERT",
+                "UPDATE",
+                "ALTER",
+                "GRANT",
+                "REVOKE",
+                "MERGE",
+            ],
+            select_only=True,
+            require_explicit_limits=False,
+        )
+
+        # Default limits
+        instance.limits = LimitsConfig(
+            default_limit=20,
+            max_query_timeout=60,
+            max_limit=10000,
+            max_bytes_processed=1073741824,  # 1GB
+        )
+
+        # Default formatting
+        instance.formatting = FormattingConfig(
+            compact_format=os.getenv("COMPACT_FORMAT", "").lower() == "true",
+        )
+
+        # Default logging
+        instance.log_queries = True
+
+        # Apply environment overrides
+        instance._apply_env_overrides()
+
+        return instance
 
     def _find_config_file(self) -> str:
         """Find configuration file in standard locations."""
@@ -100,7 +170,8 @@ class Config:
                 return str(path)
 
         raise FileNotFoundError(
-            f"No configuration file found. Searched in: {[str(p) for p in search_paths]}"
+            f"No configuration file found. Searched in: {[str(p) for p in search_paths]}\n"
+            f"Consider using command-line arguments instead: python src/server.py project:dataset_pattern"
         )
 
     def _load_yaml(self, config_path: str) -> Dict[str, Any]:
@@ -119,7 +190,7 @@ class Config:
         # Server info
         server_config = self._raw_config.get("server", {})
         self.server_name = server_config.get("name", "BigQuery MCP Server")
-        self.server_version = server_config.get("version", "0.1.0")
+        self.server_version = server_config.get("version", "1.1.0")
 
         # BigQuery settings
         bq_config = self._raw_config.get("bigquery", {})
@@ -164,9 +235,11 @@ class Config:
         # Limits
         limits_dict = self._raw_config.get("limits", {})
         self.limits = LimitsConfig(
-            default_row_limit=limits_dict.get("default_row_limit", 20),
+            default_limit=limits_dict.get(
+                "default_limit", limits_dict.get("default_row_limit", 20)
+            ),
             max_query_timeout=limits_dict.get("max_query_timeout", 60),
-            max_row_limit=limits_dict.get("max_row_limit", 10000),
+            max_limit=limits_dict.get("max_limit", limits_dict.get("max_row_limit", 10000)),
             max_bytes_processed=limits_dict.get("max_bytes_processed", 1073741824),
         )
 
@@ -174,15 +247,11 @@ class Config:
         formatting_dict = self._raw_config.get("formatting", {})
         self.formatting = FormattingConfig(
             compact_format=formatting_dict.get("compact_format", False),
-            include_schema_descriptions=formatting_dict.get("include_schema_descriptions", True),
-            abbreviate_common_terms=formatting_dict.get("abbreviate_common_terms", False),
         )
 
         # Logging
         logging_dict = self._raw_config.get("logging", {})
         self.log_queries = logging_dict.get("log_queries", True)
-        self.log_results = logging_dict.get("log_results", False)
-        self.max_query_log_length = logging_dict.get("max_query_log_length", 1000)
 
     def _apply_env_overrides(self) -> None:
         """Apply environment variable overrides."""
@@ -258,8 +327,14 @@ def get_config(config_path: Optional[str] = None) -> Config:
     """Get or create configuration instance."""
     global _config
     if _config is None:
-        _config = Config(config_path)
-        _config.validate()
+        try:
+            _config = Config(config_path)
+            _config.validate()
+        except FileNotFoundError as e:
+            logger.error(f"Configuration file not found: {e}")
+            logger.error("Please use command-line arguments instead.")
+            logger.error("Example: python src/server.py sandbox-dev:dev_* sandbox-main:main_*")
+            raise
     return _config
 
 

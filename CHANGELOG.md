@@ -5,16 +5,58 @@ All notable changes to the BigQuery MCP Server project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [LATEST]
-
-### Fixed
-- CTE (Common Table Expression) queries now work correctly - fixed validation issue where WITH statements were incorrectly rejected
-- Improved error messages for SQL validation to clarify that CTEs are supported
+## [1.1.0] - 2025-07-16
 
 ### Added
-- Comprehensive unit tests for SQL validation including CTE support
+- Command-line argument support for project configuration
+  - Direct CLI specification of project:dataset patterns
+  - Preferred over config file approach for easier deployment
+  - Example: `python src/server.py project1:dataset_* project2:table_*`
+- Query progress indication and complexity estimation
+  - Query complexity estimation (simple, moderate, complex, very_complex)
+  - Execution time tracking and logging for performance monitoring
+  - Progress feedback for long-running queries
+- Comprehensive parameter documentation in tools.md
+  - All tool parameters documented with types and examples
+  - Automatic type conversion explanation for MCP protocol compatibility
+  - Error response format documentation
 
-## [1.0.0] - 2025-01-07
+### Fixed
+- Critical parameter type validation errors ("max_rows must be integer")
+  - Automatic string-to-integer conversion for max_rows, timeout, sample_size parameters
+  - Enhanced parameter validation in execute_query() and analyze_columns()
+  - Fixed MCP protocol compatibility where agents pass strings instead of integers
+- analyze_columns intermittent failures ("No result received from client-side tool execution")
+  - Added SAFE.* functions to prevent calculation errors in BigQuery
+  - Implemented 60-second query timeouts with proper error handling
+  - Enhanced sampling queries with better NULL handling
+  - Improved fallback analysis for failed queries
+- Enhanced error handling with more specific and actionable error messages
+- Complex data type display issues (JSON/Array serialization)
+  - Enhanced _serialize_value() function with proper NULL filtering
+  - Fixed "Array cannot have a null element" errors in BigQuery results
+- Parameter naming inconsistencies across configuration files
+  - Standardized to use `default_limit` and `max_limit` consistently
+  - Updated all config files, tests, and environment examples
+
+### Changed
+- Consolidated validation logic - removed redundant query validation
+  - Eliminated duplicate validation between _validate_query_safety() and SQLValidator
+  - All SQL validation now consolidated into SQLValidator class
+- Improved tool registration with enhanced debugging and reliability
+- Configuration file approach marked as deprecated in favor of CLI arguments
+
+### Removed
+- Duplicate and redundant tools for cleaner architecture
+  - Removed `list_allowed_projects()` - redundant with `list_projects()`
+  - Removed `list_accessible_projects()` - redundant functionality
+  - Removed `get_current_context()` - identified as unnecessary complexity
+  - Deleted entire `context.py` file containing overkill context management
+- Cleaned up temporary test files from repository root
+  - Deleted test_banned_keywords.py, test_execution_check.py, test_fix.py, test_union_validation.py
+  - All functionality preserved in proper unit test suite
+
+## [1.0.0] - 2025-07-10
 
 ### Added
 - MkDocs documentation site with Material theme
@@ -39,14 +81,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Poetry configuration and dependencies (now pip-native)
 - Unused lint scripts and development artifacts
 
-## [0.5.2] - 2025-01-07
+## [0.5.2] - 2025-07-09
 
 ### Fixed
 - Fixed execute_query function returning empty results
 - Cleaned up debug logging from previous debugging attempts
 - Improved schema handling for query results
 
-## [0.5.1] - 2025-01-07
+## [0.5.1] - 2025-07-09
 
 ### Fixed
 - Fixed execute_query NoneType error when iterating query results

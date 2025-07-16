@@ -2,9 +2,37 @@
 
 This guide covers all configuration options for the BigQuery MCP Server.
 
-## Configuration File Structure
+## Command-Line Arguments (Recommended)
 
-The server uses a YAML configuration file located at `config/config.yaml`. Copy from the example:
+The preferred way to configure the server is using command-line arguments:
+
+```bash
+# Basic usage
+python src/server.py sandbox-dev:dev_* sandbox-main:main_*
+
+# Multiple patterns for same project
+python src/server.py cayzer-xyz:demo_* cayzer-xyz:analytics_*
+
+# All datasets in a project
+python src/server.py your-project:*
+
+# With additional options
+python src/server.py sandbox-dev:dev_* \
+  --billing-project cayzer-xyz \
+  --location EU
+```
+
+### Command-Line Options
+
+- **Project patterns**: `project_id:dataset_pattern` format
+- **`--billing-project`**: Project ID for billing (overrides environment variable)
+- **`--location`**: BigQuery location (default: EU)
+- **`--config`**: Path to config file (fallback only)
+- **`--version`**: Show version information
+
+## Configuration File (Deprecated)
+
+For backward compatibility, the server still supports YAML configuration files:
 
 ```bash
 cp config/config.yaml.example config/config.yaml
@@ -17,7 +45,7 @@ cp config/config.yaml.example config/config.yaml
 ```yaml
 server:
   name: "BigQuery MCP Server"
-  version: "1.0.0"
+  version: "1.1.0"
 ```
 
 - **`name`**: Display name for the server (used in logs and responses)
@@ -72,14 +100,14 @@ Control query execution and resource usage:
 
 ```yaml
 limits:
-  default_row_limit: 20
-  max_row_limit: 10000
+  default_limit: 20
+  max_limit: 10000
   max_query_timeout: 60
   max_bytes_processed: 1073741824  # 1GB
 ```
 
-- **`default_row_limit`**: Default number of rows returned (if not specified in query)
-- **`max_row_limit`**: Maximum rows that can be requested in a single query
+- **`default_limit`**: Default number of rows returned (if not specified in query)
+- **`max_limit`**: Maximum rows that can be requested in a single query
 - **`max_query_timeout`**: Maximum query execution time in seconds
 - **`max_bytes_processed`**: Maximum bytes processed per query (for cost control)
 
@@ -118,13 +146,11 @@ Response formatting options:
 ```yaml
 formatting:
   compact_mode: false
-  include_schema_descriptions: true
-  abbreviate_common_terms: false
 ```
 
 - **`compact_mode`**: Use compact response format (reduces token usage)
-- **`include_schema_descriptions`**: Include field descriptions in schema responses
-- **`abbreviate_common_terms`**: Shorten common BigQuery terms in responses
+
+*Note: Field descriptions are always included in schema responses.*
 
 ### Logging Section
 
@@ -177,7 +203,7 @@ For local development with personal projects:
 ```yaml
 server:
   name: "BigQuery MCP Development"
-  version: "1.0.0"
+  version: "1.1.0"
 
 bigquery:
   billing_project: "my-dev-project"
@@ -190,8 +216,8 @@ projects:
     datasets: ["*"]
 
 limits:
-  default_row_limit: 10
-  max_row_limit: 1000
+  default_limit: 10
+  max_limit: 1000
   max_query_timeout: 30
   max_bytes_processed: 104857600  # 100MB
 
@@ -210,7 +236,7 @@ For production deployments with multiple projects:
 ```yaml
 server:
   name: "BigQuery MCP Production"
-  version: "1.0.0"
+  version: "1.1.0"
 
 bigquery:
   billing_project: "analytics-billing"
@@ -229,8 +255,8 @@ projects:
     datasets: ["sandbox_*", "experiments_*"]
 
 limits:
-  default_row_limit: 100
-  max_row_limit: 10000
+  default_limit: 100
+  max_limit: 10000
   max_query_timeout: 300  # 5 minutes
   max_bytes_processed: 10737418240  # 10GB
 
@@ -247,12 +273,9 @@ security:
 
 formatting:
   compact_mode: true
-  include_schema_descriptions: false
 
 logging:
-  log_queries: true
-  log_results: false  # Don't log results in production
-  max_query_log_length: 500
+  log_queries: true  # Query length limited to 500 chars
 ```
 
 ### Multi-Region Setup

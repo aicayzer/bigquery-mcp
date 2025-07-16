@@ -2,7 +2,7 @@
 
 server:
   name: "BigQuery Development Server"
-  version: "1.0.0"
+  version: "1.1.0"
 
 # BigQuery configuration
 bigquery:
@@ -40,13 +40,13 @@ projects:
 # Query execution limits
 limits:
   # Default number of rows to return if not specified
-  default_row_limit: 20
+  default_limit: 20
 
   # Maximum query execution time in seconds
   max_query_timeout: 60
 
   # Maximum rows that can be requested
-  max_row_limit: 10000
+  max_limit: 10000
 
   # Maximum bytes that will be processed (for cost control)
   max_bytes_processed: 1073741824  # 1GB
@@ -55,12 +55,6 @@ limits:
 formatting:
   # Use compact format by default (can be overridden by env var)
   compact_format: false
-
-  # Include field descriptions in schema responses
-  include_schema_descriptions: true
-
-  # Abbreviate common BigQuery terms in responses
-  abbreviate_common_terms: false
 
 # Security settings
 security:
@@ -88,11 +82,5 @@ security:
 
 # Logging configuration
 logging:
-  # Log queries for audit purposes
+  # Log queries for audit purposes (query length limited to 500 chars)
   log_queries: true
-
-  # Log query results (be careful with sensitive data)
-  log_results: false
-
-  # Maximum length of logged SQL queries
-  max_query_log_length: 1000

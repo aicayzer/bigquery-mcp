@@ -31,7 +31,7 @@ class TestSQLValidator:
         ]
         config.security.require_explicit_limits = False
         config.security.select_only = True
-        config.limits.default_row_limit = 100
+        config.limits.default_limit = 100
         return config
 
     @pytest.fixture

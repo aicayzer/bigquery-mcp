@@ -41,22 +41,32 @@ A production-ready Model Context Protocol server that provides secure, cross-pro
    export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
    ```
 
-4. **Set up configuration:**
+4. **Run the server:**
    ```bash
+   # Using command-line arguments (recommended)
+   python src/server.py sandbox-dev:dev_* sandbox-main:main_*
+   
+   # Or using config file (deprecated)
    cp config/config.yaml.example config/config.yaml
    # Edit config.yaml with your project details
-   ```
-
-5. **Run the server:**
-   ```bash
    python src/server.py
    ```
 
 ### Docker Deployment
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up --build
+# Using CLI arguments (recommended)
+docker-compose up bigquery-mcp-cli --build
+
+# Using config file (deprecated)
+docker-compose up bigquery-mcp-config --build
+
+# Custom project patterns
+docker run -it --rm \
+  -v ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro \
+  -e BIGQUERY_BILLING_PROJECT=your-project \
+  bigquery-mcp:latest \
+  python src/server.py your-project:your_dataset_*
 ```
 
 ## Available Tools
@@ -73,41 +83,40 @@ The server provides 6 core tools for BigQuery interaction:
 - **`analyze_columns(table, columns, include_examples, sample_size)`** - Deep column analysis
 
 ### Query Execution
-- **`execute_query(query, format, max_rows, timeout, dry_run, parameters)`** - Execute SELECT queries
+- **`execute_query(query, format, limit, timeout, dry_run, parameters)`** - Execute SELECT queries
 
 ## Integration Examples
 
-### Claude Desktop
+### MCP Client Setup
 
-For complete setup instructions with Claude Desktop (Docker and Python options), see the **[Claude Desktop Setup Guide](docs/claude-desktop-setup.md)**.
+For complete setup instructions with Claude Desktop, Cursor IDE, and other MCP clients, see the **[Client Setup Guide](docs/setup.md)**.
 
-Quick configuration example:
+Quick Docker configuration example:
 ```json
 {
   "mcpServers": {
     "bigquery": {
-      "command": "python",
-      "args": ["/path/to/bigquery-mcp/src/server.py"],
-      "env": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/credentials.json"
-      }
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "--env", "BIGQUERY_BILLING_PROJECT=your-project",
+        "--volume", "~/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
+        "bigquery-mcp:latest",
+        "python", "src/server.py", "your-project:your_dataset_*"
+      ]
     }
   }
 }
 ```
 
-### Cursor IDE with Docker
-
-For detailed setup instructions with Cursor IDE using Docker, see the [Cursor MCP Setup Guide](docs/cursor-mcp-setup.md).
-
 ## Documentation
 
-📚 **[Complete Documentation](docs/index.md)** - Full documentation site
+📚 **Complete Documentation**
 
 - **[Installation Guide](docs/installation.md)** - Detailed installation and setup
-- **[Configuration Guide](docs/configuration.md)** - YAML configuration and environment variables
+- **[Client Setup Guide](docs/setup.md)** - Claude Desktop, Cursor IDE, and other MCP clients
 - **[Tools Reference](docs/tools.md)** - Complete tool documentation with examples
-- **[Development Guide](docs/development.md)** - Contributing and development setup
+- **[Configuration Guide](docs/configuration.md)** - YAML configuration and environment variables
 
 ### Building Documentation Locally
 
@@ -136,6 +145,8 @@ pytest tests/unit/test_discovery.py
 
 ## Development
 
+
+
 ### Code Quality
 
 ```bash
@@ -146,7 +157,7 @@ ruff format src tests
 ruff check src tests --fix
 ```
 
-For detailed development setup, see the [Development Guide](docs/development.md).
+For development, follow the installation guide and use the standard Python development workflow.
 
 ## Security & Safety
 
@@ -162,12 +173,12 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-We welcome contributions! Please see the [Development Guide](docs/development.md) for details on:
+We welcome contributions! Please follow these guidelines:
 
-- Setting up a development environment
-- Code style guidelines
-- Testing requirements
-- Pull request process
+- Use `ruff format` and `ruff check --fix` before committing
+- Add tests for new functionality with `pytest`
+- Follow the existing code patterns and conventions
+- Update documentation for any user-facing changes
 
 ## Support
 

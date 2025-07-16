@@ -4,14 +4,14 @@ services:
     build: .
     image: bigquery-mcp:latest
     container_name: bigquery-mcp-cli
-    command: ["python", "src/server.py", "sandbox-dev-466110:dev_*", "sandbox-main-466110:main_*"]
+    command: ["python", "src/server.py", "your-project-id:dataset_pattern", "another-project:pattern_*"]
     volumes:
       - ./logs:/app/logs
       - ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - COMPACT_FORMAT=${COMPACT_FORMAT:-true}
-      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-cayzer-xyz}
+      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-your-billing-project}
     stdin_open: true
     tty: false
 
@@ -28,4 +28,4 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - COMPACT_FORMAT=${COMPACT_FORMAT:-true}
     stdin_open: true
-    tty: false
+    tty: false 

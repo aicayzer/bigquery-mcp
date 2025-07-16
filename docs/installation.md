@@ -120,7 +120,7 @@ For production deployments:
    ```yaml
    server:
      name: "BigQuery MCP Server"
-     version: "1.0.0"
+     version: "1.1.0"
 
    bigquery:
      billing_project: "your-billing-project"

@@ -9,11 +9,10 @@ import pytest
 from tools.execution import (
     _format_query_results,
     _serialize_value,
-    _validate_query_safety,
     execute_query,
     register_execution_tools,
 )
-from utils.errors import QueryExecutionError, SecurityError
+from utils.errors import QueryExecutionError
 
 
 class TestQueryValidation:
@@ -40,8 +39,8 @@ class TestQueryValidation:
             "UPDATE",
         ]
         execution.config.security.require_explicit_limits = False
-        execution.config.limits.default_row_limit = 100
-        execution.config.limits.max_row_limit = 10000
+        execution.config.limits.default_limit = 100
+        execution.config.limits.max_limit = 10000
         execution.config.limits.max_query_timeout = 60
         execution.config.limits.max_bytes_processed = 1073741824
 
@@ -53,45 +52,8 @@ class TestQueryValidation:
         execution.config = None
         execution.formatter = None
 
-    def test_validate_safe_select_query(self, mock_dependencies):
-        """Test validation of safe SELECT query."""
-        # Should not raise
-        _validate_query_safety("SELECT * FROM dataset.table")
-        _validate_query_safety("SELECT COUNT(*) FROM table WHERE id > 100")
-        _validate_query_safety("WITH cte AS (SELECT * FROM t) SELECT * FROM cte")
-
-    def test_validate_dangerous_queries(self, mock_dependencies):
-        """Test rejection of dangerous queries."""
-        dangerous_queries = [
-            "DELETE FROM table WHERE 1=1",
-            "DROP TABLE dataset.table",
-            "INSERT INTO table VALUES (1, 2, 3)",
-            "UPDATE table SET column = 'value'",
-            "TRUNCATE TABLE dataset.table",
-        ]
-
-        for query in dangerous_queries:
-            with pytest.raises(SecurityError) as exc_info:
-                _validate_query_safety(query)
-            assert "Forbidden SQL operation" in str(exc_info.value)
-
-    def test_validate_non_select_query(self, mock_dependencies):
-        """Test rejection of non-SELECT queries."""
-        with pytest.raises(SecurityError) as exc_info:
-            _validate_query_safety("DESCRIBE dataset.table")
-        assert "Only SELECT statements and CTEs (WITH) are allowed" in str(exc_info.value)
-
-    def test_require_explicit_limits(self, mock_dependencies):
-        """Test LIMIT requirement when configured."""
-        mock_dependencies.config.security.require_explicit_limits = True
-
-        # Should pass with LIMIT
-        _validate_query_safety("SELECT * FROM table LIMIT 10")
-
-        # Should fail without LIMIT
-        with pytest.raises(SecurityError) as exc_info:
-            _validate_query_safety("SELECT * FROM table")
-        assert "must include an explicit LIMIT" in str(exc_info.value)
+    # NOTE: Query validation tests moved to test_validation.py
+    # Query validation handled by SQLValidator class
 
 
 class TestResultFormatting:
@@ -156,7 +118,7 @@ class TestResultFormatting:
         nested = {"key": datetime(2023, 1, 1), "values": [Decimal("1.5"), None]}
         serialized = _serialize_value(nested)
         assert serialized["key"] == "2023-01-01T00:00:00"
-        assert serialized["values"] == [1.5, None]
+        assert serialized["values"] == [1.5]  # None values filtered out for BigQuery compatibility
 
 
 class TestExecuteQuery:
@@ -177,13 +139,13 @@ class TestExecuteQuery:
         # Configure mocks
         execution.config.security.banned_sql_keywords = ["DELETE", "DROP"]
         execution.config.security.require_explicit_limits = False
-        execution.config.limits.default_row_limit = 100
-        execution.config.limits.max_row_limit = 10000
+        execution.config.limits.default_limit = 100
+        execution.config.limits.max_limit = 10000
         execution.config.limits.max_query_timeout = 60
         execution.config.limits.max_bytes_processed = 1073741824
         execution.config.log_queries = True
         execution.config.log_results = False
-        execution.config.max_query_log_length = 200
+        # Query logging length is limited to 500 characters
         execution.formatter.compact_mode = False
 
         yield execution
@@ -429,7 +391,7 @@ class TestToolRegistration:
         # Register tools
         register_execution_tools(mock_mcp, mock_handler, mock_client, mock_config, mock_formatter)
 
-        # Verify tools were registered (only execute_query exists)
+        # Verify tools were registered
         assert mock_mcp.tool.call_count == 1
 
         # Verify globals were set

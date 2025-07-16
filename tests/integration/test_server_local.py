@@ -37,7 +37,7 @@ def test_with_mock_fallback():
 
         print("   ✓ Server initialized successfully")
 
-        # Commented out - these functions don't exist in the implementation
+        # Functions not implemented in current version
         # # Test get_server_info
         # print("\n2. Testing get_server_info()...")
         # info = get_server_info()
@@ -112,7 +112,7 @@ def test_basic_functionality():
         initialize_server()
         tools.discovery.register_discovery_tools(mcp, handle_error, bq_client, config, formatter)
 
-        # Test server info - commented out as these don't exist
+        # Server info functions not implemented
         # info = get_server_info()
         # assert info['status'] == 'success'
         # assert 'server' in info

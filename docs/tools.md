@@ -2,6 +2,17 @@
 
 This document provides detailed documentation for all available MCP tools in the BigQuery MCP Server.
 
+## Parameter Types and Validation
+
+All tools perform automatic parameter type conversion to ensure compatibility with MCP protocol:
+
+- **Integers**: String values are automatically converted to integers (e.g., "100" → 100)
+- **Booleans**: String values are converted to booleans (e.g., "true" → true)
+- **Arrays**: JSON string arrays are parsed automatically
+- **Optional Parameters**: Marked as optional in tool descriptions
+
+
+
 ## Discovery Tools
 
 ### list_projects()
@@ -280,14 +291,14 @@ Performs deep statistical analysis on specific columns with sampling.
 
 ## Query Execution
 
-### execute_query(query, format, max_rows, timeout, dry_run, parameters)
+### execute_query(query, format, limit, timeout, dry_run, parameters)
 
 Executes SELECT queries with comprehensive safety validation.
 
 **Parameters**:
 - `query` (str): SQL SELECT query to execute
 - `format` (str, optional): Output format - 'json', 'csv', or 'table'. Default: 'json'
-- `max_rows` (int, optional): Maximum rows to return. Default: from config (20)
+- `limit` (int, optional): Maximum rows to return. Default: from config (20)
 - `timeout` (int, optional): Query timeout in seconds. Default: from config (60)
 - `dry_run` (bool, optional): Validate and estimate cost without executing. Default: false
 - `parameters` (dict, optional): Named query parameters as {name: value}

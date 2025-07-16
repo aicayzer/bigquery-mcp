@@ -39,12 +39,8 @@ class ResponseFormatter:
                 field_type = field["type"]
                 desc = field.get("description", "No description")
 
-                # Abbreviate common terms if configured
-                if self.config.formatting.abbreviate_common_terms:
-                    field_type = self._abbreviate_type(field_type)
-
-                # Include description only if configured
-                if self.config.formatting.include_schema_descriptions and desc != "No description":
+                # Always include description if available
+                if desc != "No description":
                     result[name] = f"{field_type} - {desc}"
                 else:
                     result[name] = field_type
@@ -56,9 +52,8 @@ class ResponseFormatter:
             for field in schema:
                 formatted_field = {"name": field["name"], "type": field["type"]}
 
-                # Include description if configured
-                if self.config.formatting.include_schema_descriptions:
-                    formatted_field["description"] = field.get("description", "No description")
+                # Always include description
+                formatted_field["description"] = field.get("description", "No description")
 
                 # Include mode if present
                 if "mode" in field:
@@ -190,21 +185,6 @@ class ResponseFormatter:
         writer.writerows(rows)
 
         return output.getvalue()
-
-    def _abbreviate_type(self, field_type: str) -> str:
-        """Abbreviate common BigQuery types."""
-        abbreviations = {
-            "STRING": "STR",
-            "INTEGER": "INT",
-            "FLOAT64": "FLOAT",
-            "NUMERIC": "NUM",
-            "BOOLEAN": "BOOL",
-            "TIMESTAMP": "TS",
-            "DATETIME": "DT",
-            "RECORD": "REC",
-            "REPEATED": "REP",
-        }
-        return abbreviations.get(field_type, field_type)
 
     def _improve_not_found_message(self, message: str) -> str:
         """Make 'not found' errors more helpful."""

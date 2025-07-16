@@ -53,6 +53,11 @@ coverage.xml
 
 # Configuration
 config/config.yaml
+config/config.dev.yaml
+
+# Docker Compose (contains personal project IDs)
+docker-compose.yml
+docker-compose.dev.yml
 
 # Logs
 logs/
@@ -84,3 +89,5 @@ servers/
 
 # MkDocs build output
 site/
+notes/
+tasks.md

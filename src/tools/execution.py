@@ -3,6 +3,7 @@
 import csv
 import io
 import logging
+import time as time_module
 from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
@@ -29,27 +30,6 @@ def _ensure_initialized():
             "Execution tools not properly initialized. "
             "These tools must be used through the MCP server."
         )
-
-
-def _validate_query_safety(query: str) -> None:
-    """Validate query for safety and security.
-
-    Raises SecurityError if query contains forbidden operations.
-    """
-    # Use SQL validator with the global config
-    validator = SQLValidator(config)
-
-    try:
-        validator.validate_query(query)
-    except SQLValidationError as e:
-        raise SecurityError(str(e))
-
-    # Additional safety checks specific to execution
-    query_upper = query.upper().strip()
-
-    # Ensure it's a SELECT query (WITH is allowed for CTEs)
-    if not query_upper.startswith("SELECT") and not query_upper.startswith("WITH"):
-        raise SecurityError("Only SELECT queries are allowed")
 
 
 def _format_query_results(results: List[Dict], format_type: str = "json") -> Union[str, List[Dict]]:
@@ -125,7 +105,11 @@ def _serialize_value(value: Any) -> Any:
     elif isinstance(value, dict):
         return {k: _serialize_value(v) for k, v in value.items()}
     elif isinstance(value, list):
-        return [_serialize_value(v) for v in value]
+        # Filter out None values to prevent BigQuery array NULL element errors
+        return [_serialize_value(v) for v in value if v is not None]
+    elif hasattr(value, "__dict__"):
+        # Handle BigQuery custom objects
+        return str(value)
     else:
         return value
 
@@ -133,7 +117,7 @@ def _serialize_value(value: Any) -> Any:
 def execute_query(
     query: str,
     format: str = "json",
-    max_rows: Optional[int] = None,
+    limit: Optional[int] = None,
     timeout: Optional[int] = None,
     dry_run: bool = False,
     parameters: Optional[Dict[str, Any]] = None,
@@ -146,7 +130,7 @@ def execute_query(
     Args:
         query: SQL query to execute (SELECT only)
         format: Output format - 'json', 'csv', or 'table'
-        max_rows: Maximum rows to return (default: from config)
+        limit: Maximum rows to return (default: from config)
         timeout: Query timeout in seconds (default: from config)
         dry_run: If True, validate and estimate query without executing
         parameters: Named query parameters as {name: value} dict
@@ -163,21 +147,49 @@ def execute_query(
 
     try:
         # Validate query safety
-        _validate_query_safety(query)
+        validator = SQLValidator(config)
+        try:
+            validator.validate_query(query)
+        except SQLValidationError as e:
+            raise SecurityError(str(e))
 
-        # Apply limits
-        if max_rows is None:
-            max_rows = config.limits.default_row_limit
+        # Apply limits with type checking and conversion
+        if limit is None:
+            limit = config.limits.default_limit
         else:
-            max_rows = min(max_rows, config.limits.max_row_limit)
+            # Convert string to int if needed (for MCP compatibility)
+            if isinstance(limit, str):
+                try:
+                    limit = int(limit)
+                except ValueError:
+                    raise ValueError(f"limit must be an integer, got: {limit}")
+            elif isinstance(limit, float):
+                limit = int(limit)
+            elif not isinstance(limit, int):
+                raise ValueError(f"limit must be an integer, got type: {type(limit)}")
+
+            limit = min(limit, config.limits.max_limit)
 
         if timeout is None:
             timeout = config.limits.max_query_timeout
+        else:
+            # Convert string to int if needed (for MCP compatibility)
+            if isinstance(timeout, str):
+                try:
+                    timeout = int(timeout)
+                except ValueError:
+                    raise ValueError(f"timeout must be an integer, got: {timeout}")
+            elif isinstance(timeout, float):
+                timeout = int(timeout)
+            elif not isinstance(timeout, int):
+                raise ValueError(f"timeout must be an integer, got type: {type(timeout)}")
+
+            timeout = min(timeout, config.limits.max_query_timeout)
 
         # Add LIMIT if not present and not dry run
         query_upper = query.upper().strip()
         if not dry_run and "LIMIT" not in query_upper:
-            query = f"{query.rstrip().rstrip(';')} LIMIT {max_rows}"
+            query = f"{query.rstrip().rstrip(';')} LIMIT {limit}"
 
         # Configure query job
         job_config = QueryJobConfig(
@@ -201,8 +213,8 @@ def execute_query(
 
         # Log query if enabled
         if config.log_queries:
-            log_query = query[: config.max_query_log_length]
-            if len(query) > config.max_query_log_length:
+            log_query = query[:500]  # Limit query log length
+            if len(query) > 500:
                 log_query += "..."
             logger.info(f"Query: {log_query}")
 
@@ -211,14 +223,17 @@ def execute_query(
 
         # Handle dry run
         if dry_run:
+            total_bytes = getattr(query_job, "total_bytes_processed", 0) or 0
+            total_billed = getattr(query_job, "total_bytes_billed", 0) or 0
+
             return {
                 "status": "success",
                 "dry_run": True,
-                "total_bytes_processed": query_job.total_bytes_processed,
-                "total_bytes_billed": query_job.total_bytes_billed,
-                "estimated_cost_usd": round(
-                    (query_job.total_bytes_billed / 1e12) * 5.0, 4
-                ),  # $5 per TB
+                "total_bytes_processed": total_bytes,
+                "total_bytes_billed": total_billed,
+                "estimated_cost_usd": round((total_billed / 1e12) * 5.0, 4)
+                if total_billed
+                else 0.0,
                 "schema": (
                     [
                         {
@@ -228,14 +243,26 @@ def execute_query(
                         }
                         for field in query_job.schema
                     ]
-                    if query_job.schema
+                    if hasattr(query_job, "schema") and query_job.schema
                     else []
                 ),
             }
 
-        # Get results with proper timeout handling
+        # Get results with proper timeout handling and progress tracking
+        logger.info(
+            f"Starting query execution (estimated complexity: {_estimate_query_complexity(query)})"
+        )
+
         # Wait for the query to complete and get the row iterator
-        rows_iterator = query_job.result(timeout=timeout)
+        try:
+            start_time = time_module.time()
+            rows_iterator = query_job.result(timeout=timeout)
+            execution_time = time_module.time() - start_time
+            logger.info(f"Query completed in {execution_time:.2f} seconds")
+        except Exception as e:
+            execution_time = time_module.time() - start_time
+            logger.error(f"Query failed after {execution_time:.2f} seconds: {e}")
+            raise
 
         # CRITICAL FIX: Get schema BEFORE consuming the iterator
         schema_fields = None
@@ -251,7 +278,7 @@ def execute_query(
         if rows_iterator:
             for row in rows_iterator:
                 results.append(row)
-                if max_rows and len(results) >= max_rows:
+                if limit and len(results) >= limit:
                     break
 
         # Convert to dictionaries with proper serialization
@@ -323,24 +350,70 @@ def execute_query(
         logger.error(f"Query execution error: {error_str}")
 
         # Handle specific error types
-        if "403" in error_str:
+        if "403" in error_str or "Permission denied" in error_str:
             raise QueryExecutionError(
                 "Permission denied. Ensure you have bigquery.jobs.create permission "
                 "and access to the referenced tables."
             )
-        elif "404" in error_str:
+        elif "404" in error_str or "Not found" in error_str:
             raise QueryExecutionError("Table not found. Check the table references in your query.")
-        elif "Syntax error" in error_str:
+        elif "Syntax error" in error_str or "syntax" in error_str.lower():
             raise QueryExecutionError(f"SQL syntax error: {error_str}")
-        elif isinstance(e, TimeoutError) or "TimeoutError" in str(type(e)):
-            # Only treat actual timeout errors as timeouts
+        elif "Array cannot have a null element" in error_str:
+            raise QueryExecutionError(
+                "BigQuery array contains NULL values. Use COALESCE() or filter NULL values: "
+                f"{error_str}"
+            )
+        elif isinstance(e, TimeoutError) or "timeout" in error_str.lower():
             raise QueryExecutionError(
                 f"Query timeout after {timeout} seconds. "
-                f"Try a smaller query or increase the timeout."
+                f"Try adding LIMIT clause, filtering data, or increase timeout parameter."
+            )
+        elif "quota" in error_str.lower() or "rate limit" in error_str.lower():
+            raise QueryExecutionError(
+                f"BigQuery quota exceeded. Try again later or reduce query complexity: {error_str}"
             )
         else:
             # For any other error, preserve the original message
             raise QueryExecutionError(f"Query execution failed: {error_str}")
+
+
+def _estimate_query_complexity(query: str) -> str:
+    """
+    Estimate query complexity for better timeout predictions.
+
+    Args:
+        query: SQL query string
+
+    Returns:
+        Complexity level as string
+    """
+    query_upper = query.upper()
+    complexity_score = 0
+
+    # Count complexity indicators
+    if "JOIN" in query_upper:
+        complexity_score += query_upper.count("JOIN") * 2
+    if "WINDOW" in query_upper or "OVER(" in query_upper:
+        complexity_score += 3
+    if "GROUP BY" in query_upper:
+        complexity_score += 1
+    if "ORDER BY" in query_upper:
+        complexity_score += 1
+    if "UNION" in query_upper:
+        complexity_score += 2
+    if "WITH" in query_upper:
+        complexity_score += query_upper.count("WITH")
+
+    # Classify complexity
+    if complexity_score == 0:
+        return "simple"
+    elif complexity_score <= 3:
+        return "moderate"
+    elif complexity_score <= 7:
+        return "complex"
+    else:
+        return "very_complex"
 
 
 def register_execution_tools(
