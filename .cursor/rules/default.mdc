@@ -1,0 +1,45 @@
+---
+description: BigQuery MCP Development Standards
+alwaysApply: true
+---
+# BigQuery MCP Development Standards
+
+## Code Quality
+- Write clean, efficient, minimal code
+- No unnecessary complexity or over-engineering
+- Follow existing patterns and conventions
+- Use descriptive variable names, avoid abbreviations
+
+## Version Control
+- Update version numbers consistently across all files when making releases
+- Use semantic versioning (MAJOR.MINOR.PATCH)
+- Keep commits focused and atomic
+- Write clear, concise commit messages
+
+## Code Standards
+- Run `ruff format` before committing
+- Run `ruff check --fix` to resolve linting issues
+- Add type hints for function parameters and returns
+- Include docstrings for public functions and classes
+
+## Testing
+- Add tests for new functionality
+- Run `pytest` before committing
+- Ensure all tests pass in CI
+
+## Documentation
+- Keep documentation minimal and focused
+- Update relevant docs when changing functionality
+- Use clear, direct language - no fluff or emojis
+- Focus on what users need to know, not implementation details
+
+## Architecture
+- Prefer command-line arguments over config files
+- Keep dependencies minimal
+- Follow MCP protocol standards
+- Maintain backwards compatibility when possible
+
+## Error Handling
+- Use custom exception classes for specific error types
+- Provide actionable error messages
+- Log errors appropriately for debugging 

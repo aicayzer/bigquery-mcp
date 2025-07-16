@@ -4,7 +4,7 @@ import logging
 
 from fastmcp import FastMCP
 
-from ..client import BigQueryClient
+from client import BigQueryClient
 
 logger = logging.getLogger(__name__)
 

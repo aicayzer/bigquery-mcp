@@ -43,9 +43,9 @@ class SecurityConfig:
 class LimitsConfig:
     """Query and response limits configuration."""
 
-    default_row_limit: int = 20
+    default_limit: int = 20
     max_query_timeout: int = 60
-    max_row_limit: int = 10000
+    max_limit: int = 10000
     max_bytes_processed: int = 1073741824  # 1GB
 
 
@@ -54,8 +54,6 @@ class FormattingConfig:
     """Response formatting configuration."""
 
     compact_format: bool = False
-    include_schema_descriptions: bool = True
-    abbreviate_common_terms: bool = False
 
 
 class Config:
@@ -164,9 +162,11 @@ class Config:
         # Limits
         limits_dict = self._raw_config.get("limits", {})
         self.limits = LimitsConfig(
-            default_row_limit=limits_dict.get("default_row_limit", 20),
+            default_limit=limits_dict.get(
+                "default_limit", limits_dict.get("default_row_limit", 20)
+            ),
             max_query_timeout=limits_dict.get("max_query_timeout", 60),
-            max_row_limit=limits_dict.get("max_row_limit", 10000),
+            max_limit=limits_dict.get("max_limit", limits_dict.get("max_row_limit", 10000)),
             max_bytes_processed=limits_dict.get("max_bytes_processed", 1073741824),
         )
 
@@ -174,15 +174,11 @@ class Config:
         formatting_dict = self._raw_config.get("formatting", {})
         self.formatting = FormattingConfig(
             compact_format=formatting_dict.get("compact_format", False),
-            include_schema_descriptions=formatting_dict.get("include_schema_descriptions", True),
-            abbreviate_common_terms=formatting_dict.get("abbreviate_common_terms", False),
         )
 
         # Logging
         logging_dict = self._raw_config.get("logging", {})
         self.log_queries = logging_dict.get("log_queries", True)
-        self.log_results = logging_dict.get("log_results", False)
-        self.max_query_log_length = logging_dict.get("max_query_log_length", 1000)
 
     def _apply_env_overrides(self) -> None:
         """Apply environment variable overrides."""

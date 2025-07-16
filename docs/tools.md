@@ -339,14 +339,14 @@ Performs deep statistical analysis on specific columns with sampling.
 
 ## Query Execution
 
-### execute_query(query, format, max_rows, timeout, dry_run, parameters)
+### execute_query(query, format, limit, timeout, dry_run, parameters)
 
 Executes SELECT queries with comprehensive safety validation.
 
 **Parameters**:
 - `query` (str): SQL SELECT query to execute
 - `format` (str, optional): Output format - 'json', 'csv', or 'table'. Default: 'json'
-- `max_rows` (int, optional): Maximum rows to return. Default: from config (20)
+- `limit` (int, optional): Maximum rows to return. Default: from config (20)
 - `timeout` (int, optional): Query timeout in seconds. Default: from config (60)
 - `dry_run` (bool, optional): Validate and estimate cost without executing. Default: false
 - `parameters` (dict, optional): Named query parameters as {name: value}

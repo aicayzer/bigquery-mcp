@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   bigquery-mcp-dev:
     build: 
       context: .
       dockerfile: Dockerfile
-      target: production
+    image: bigquery-mcp-dev:latest
     container_name: bigquery-mcp-dev-server
     volumes:
       - ./config:/app/config:ro
@@ -14,9 +12,10 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
       - COMPACT_FORMAT=${COMPACT_FORMAT:-false}
-      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT}
+      # BIGQUERY_BILLING_PROJECT is set in config.dev.yaml
       - MCP_SERVER_NAME=BigQuery Development MCP
       - CONFIG_FILE=/app/config/config.dev.yaml
+      - ENABLE_DEV_TOOLS=true
     stdin_open: true
     tty: false
     # Note: No ports exposed - this is for MCP usage, not HTTP

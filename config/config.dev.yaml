@@ -20,15 +20,15 @@ bigquery:
 # Project access control
 # Configure your development projects here
 projects:
-  - project_id: "your-dev-project"
-    project_name: "Development Project"
+  - project_id: "sandbox-dev-466110"
+    project_name: "Sandbox Development"
     description: "Development and testing data"
     datasets: ["dev_*", "test_*", "staging_*"]
 
-  - project_id: "your-analytics-project"
-    project_name: "Analytics Development"
-    description: "Analytics development workspace"
-    datasets: ["analytics_*", "experiments_*"]
+  - project_id: "sandbox-main-466110"
+    project_name: "Sandbox Main"
+    description: "Main testing data"
+    datasets: ["main_*", "prod_*", "*"]
 
 # Query execution limits (more permissive for development)
 limits:

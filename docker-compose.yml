@@ -1,6 +1,7 @@
 services:
   bigquery-mcp:
     build: .
+    image: bigquery-mcp:latest
     container_name: bigquery-mcp-server
     volumes:
       - ./config:/app/config:ro
@@ -9,8 +10,8 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - COMPACT_FORMAT=${COMPACT_FORMAT:-true}
-      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-your-billing-project}
-      # No GOOGLE_APPLICATION_CREDENTIALS - let it discover automatically
+      # BIGQUERY_BILLING_PROJECT is set in config.yaml
+      # GOOGLE_APPLICATION_CREDENTIALS uses application default credentials
     stdin_open: true
     tty: false
-    # restart: unless-stopped  # Disabled for MCP usage
+    # restart: unless-stopped  # Not needed for MCP server usage

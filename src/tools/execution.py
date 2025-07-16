@@ -32,20 +32,6 @@ def _ensure_initialized():
         )
 
 
-def _validate_query_safety(query: str) -> None:
-    """Validate query for safety and security.
-
-    Raises SecurityError if query contains forbidden operations.
-    """
-    # Use SQL validator with the global config
-    validator = SQLValidator(config)
-
-    try:
-        validator.validate_query(query)
-    except SQLValidationError as e:
-        raise SecurityError(str(e))
-
-
 def _format_query_results(results: List[Dict], format_type: str = "json") -> Union[str, List[Dict]]:
     """Format query results based on requested format.
 
@@ -131,7 +117,7 @@ def _serialize_value(value: Any) -> Any:
 def execute_query(
     query: str,
     format: str = "json",
-    max_rows: Optional[int] = None,
+    limit: Optional[int] = None,
     timeout: Optional[int] = None,
     dry_run: bool = False,
     parameters: Optional[Dict[str, Any]] = None,
@@ -144,7 +130,7 @@ def execute_query(
     Args:
         query: SQL query to execute (SELECT only)
         format: Output format - 'json', 'csv', or 'table'
-        max_rows: Maximum rows to return (default: from config)
+        limit: Maximum rows to return (default: from config)
         timeout: Query timeout in seconds (default: from config)
         dry_run: If True, validate and estimate query without executing
         parameters: Named query parameters as {name: value} dict
@@ -161,24 +147,28 @@ def execute_query(
 
     try:
         # Validate query safety
-        _validate_query_safety(query)
+        validator = SQLValidator(config)
+        try:
+            validator.validate_query(query)
+        except SQLValidationError as e:
+            raise SecurityError(str(e))
 
         # Apply limits with type checking and conversion
-        if max_rows is None:
-            max_rows = config.limits.default_row_limit
+        if limit is None:
+            limit = config.limits.default_limit
         else:
             # Convert string to int if needed (for MCP compatibility)
-            if isinstance(max_rows, str):
+            if isinstance(limit, str):
                 try:
-                    max_rows = int(max_rows)
+                    limit = int(limit)
                 except ValueError:
-                    raise ValueError(f"max_rows must be an integer, got: {max_rows}")
-            elif isinstance(max_rows, float):
-                max_rows = int(max_rows)
-            elif not isinstance(max_rows, int):
-                raise ValueError(f"max_rows must be an integer, got type: {type(max_rows)}")
+                    raise ValueError(f"limit must be an integer, got: {limit}")
+            elif isinstance(limit, float):
+                limit = int(limit)
+            elif not isinstance(limit, int):
+                raise ValueError(f"limit must be an integer, got type: {type(limit)}")
 
-            max_rows = min(max_rows, config.limits.max_row_limit)
+            limit = min(limit, config.limits.max_limit)
 
         if timeout is None:
             timeout = config.limits.max_query_timeout
@@ -199,7 +189,7 @@ def execute_query(
         # Add LIMIT if not present and not dry run
         query_upper = query.upper().strip()
         if not dry_run and "LIMIT" not in query_upper:
-            query = f"{query.rstrip().rstrip(';')} LIMIT {max_rows}"
+            query = f"{query.rstrip().rstrip(';')} LIMIT {limit}"
 
         # Configure query job
         job_config = QueryJobConfig(
@@ -223,8 +213,8 @@ def execute_query(
 
         # Log query if enabled
         if config.log_queries:
-            log_query = query[: config.max_query_log_length]
-            if len(query) > config.max_query_log_length:
+            log_query = query[:500]  # Limit query log length
+            if len(query) > 500:
                 log_query += "..."
             logger.info(f"Query: {log_query}")
 
@@ -288,7 +278,7 @@ def execute_query(
         if rows_iterator:
             for row in rows_iterator:
                 results.append(row)
-                if max_rows and len(results) >= max_rows:
+                if limit and len(results) >= limit:
                     break
 
         # Convert to dictionaries with proper serialization

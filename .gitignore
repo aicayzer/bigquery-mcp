@@ -53,6 +53,7 @@ coverage.xml
 
 # Configuration
 config/config.yaml
+config/config.dev.yaml
 
 # Logs
 logs/
@@ -84,3 +85,4 @@ servers/
 
 # MkDocs build output
 site/
+notes/

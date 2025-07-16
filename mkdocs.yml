@@ -3,14 +3,10 @@ site_description: A Model Context Protocol server for BigQuery with cross-projec
 site_url: https://github.com/aicayzer/bigquery-mcp
 
 nav:
-  - Home: index.md
   - Installation: installation.md
-  - Setup Guides:
-    - Claude Desktop: claude-desktop-setup.md
-    - Cursor IDE: cursor-mcp-setup.md
+  - Client Setup: setup.md
   - Tools Reference: tools.md
   - Configuration: configuration.md
-  - Development: development.md
 
 theme:
   name: material
