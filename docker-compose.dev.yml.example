@@ -1,0 +1,24 @@
+services:
+  bigquery-mcp-dev:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: bigquery-mcp-dev:latest
+    container_name: bigquery-mcp-dev-server
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+      - ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - COMPACT_FORMAT=${COMPACT_FORMAT:-false}
+      # BIGQUERY_BILLING_PROJECT is set in config.dev.yaml
+      - MCP_SERVER_NAME=BigQuery Development MCP
+      - CONFIG_FILE=/app/config/config.dev.yaml
+      - ENABLE_DEV_TOOLS=true
+    stdin_open: true
+    tty: false
+    # Note: No ports exposed - this is for MCP usage, not HTTP
+    labels:
+      - "mcp.server.type=development"
+      - "mcp.server.version=1.1.0-dev" 

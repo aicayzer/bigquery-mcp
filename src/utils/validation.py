@@ -135,7 +135,7 @@ class SQLValidator:
 
         # Get limit value
         if limit is None:
-            limit = self.config.limits.default_row_limit
+            limit = self.config.limits.default_limit
 
         # Remove trailing semicolon if present
         sql_clean = sql.rstrip().rstrip(";")

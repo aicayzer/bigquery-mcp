@@ -11,55 +11,7 @@ All tools perform automatic parameter type conversion to ensure compatibility wi
 - **Arrays**: JSON string arrays are parsed automatically
 - **Optional Parameters**: Marked as optional in tool descriptions
 
-## Context Management Tools
 
-### get_current_context()
-
-Get the current BigQuery context including billing project, last accessed resources, and allowed projects/datasets for better query planning.
-
-**Parameters**: None
-
-**Returns**: Dictionary with current context information
-
-**Example Response**:
-```json
-{
-  "success": true,
-  "context": {
-    "billing_project": "my-project",
-    "allowed_projects": ["project1", "project2"],
-    "allowed_datasets": ["dataset1", "dataset2"],
-    "last_accessed": {
-      "project": "project1",
-      "dataset": "dataset1"
-    },
-    "location": "US"
-  }
-}
-```
-
-### list_accessible_projects()
-
-List all projects accessible through the current configuration.
-
-**Parameters**: None
-
-**Returns**: Dictionary with list of accessible projects and their allowed datasets
-
-**Example Response**:
-```json
-{
-  "success": true,
-  "accessible_projects": ["project1", "project2"],
-  "project_details": {
-    "project1": {
-      "is_billing_project": true,
-      "allowed_datasets": ["dataset1", "dataset2"]
-    }
-  },
-  "total_count": 2
-}
-```
 
 ## Discovery Tools
 

@@ -41,26 +41,32 @@ A production-ready Model Context Protocol server that provides secure, cross-pro
    export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
    ```
 
-4. **Set up configuration:**
+4. **Run the server:**
    ```bash
+   # Using command-line arguments (recommended)
+   python src/server.py sandbox-dev:dev_* sandbox-main:main_*
+   
+   # Or using config file (deprecated)
    cp config/config.yaml.example config/config.yaml
    # Edit config.yaml with your project details
-   ```
-
-5. **Run the server:**
-   ```bash
    python src/server.py
    ```
 
 ### Docker Deployment
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up --build
+# Using CLI arguments (recommended)
+docker-compose up bigquery-mcp-cli --build
 
-# Alternatively, force rebuild without cache
-docker-compose build --no-cache
-docker-compose up
+# Using config file (deprecated)
+docker-compose up bigquery-mcp-config --build
+
+# Custom project patterns
+docker run -it --rm \
+  -v ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro \
+  -e BIGQUERY_BILLING_PROJECT=your-project \
+  bigquery-mcp:latest \
+  python src/server.py your-project:your_dataset_*
 ```
 
 ## Available Tools
@@ -94,9 +100,9 @@ Quick Docker configuration example:
       "args": [
         "run", "--rm", "-i",
         "--env", "BIGQUERY_BILLING_PROJECT=your-project",
-        "--volume", "/path/to/config:/app/config:ro",
         "--volume", "~/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
-        "bigquery-mcp:latest"
+        "bigquery-mcp:latest",
+        "python", "src/server.py", "your-project:your_dataset_*"
       ]
     }
   }

@@ -32,8 +32,11 @@ projects:
 
 # Query execution limits (more permissive for development)
 limits:
-  # Maximum rows returned per query (0 = unlimited)
-  max_rows: 1000
+  # Default number of rows to return if not specified
+  default_limit: 50
+  
+  # Maximum rows that can be requested
+  max_limit: 1000
   
   # Query timeout in seconds
   max_query_timeout: 300
@@ -44,16 +47,16 @@ limits:
   # Require explicit LIMIT clause in queries
   require_limit: false
 
-# SQL validation settings (relaxed for development)
-sql_validation:
+# Security settings (relaxed for development)
+security:
   # Banned keywords (case-insensitive)
-  banned_keywords: ["DROP", "DELETE", "UPDATE", "INSERT", "TRUNCATE", "ALTER", "CREATE"]
+  banned_sql_keywords: ["DROP", "DELETE", "UPDATE", "INSERT", "TRUNCATE", "ALTER", "CREATE"]
   
   # Allow only SELECT and WITH statements
-  allowed_statements: ["SELECT", "WITH"]
+  select_only: true
   
-  # Remove SQL comments before validation
-  remove_comments: true
+  # Require explicit LIMIT clause in queries
+  require_explicit_limits: false
 
 # Development-specific features
 development:

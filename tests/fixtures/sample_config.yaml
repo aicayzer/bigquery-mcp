@@ -17,7 +17,7 @@ projects:
     datasets: ["*"]
 
 limits:
-  default_row_limit: 20
+  default_limit: 20
   max_query_timeout: 60
 
 security:

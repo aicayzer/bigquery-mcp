@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://github.com/aicayzer/bigquery-mcp/tools/">
       
       
-        <link rel="prev" href="../installation/">
+        <link rel="prev" href="../setup/">
       
       
         <link rel="next" href="../configuration/">
@@ -176,7 +176,7 @@
     
     
       <div class="md-header__source">
-        <a href="https://github.com/yourusername/bigquery-mcp" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/aicayzer/bigquery-mcp" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
@@ -207,13 +207,13 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../installation/" class="md-tabs__link">
         
   
   
     
   
-  Home
+  Installation
 
       </a>
     </li>
@@ -226,13 +226,13 @@
   
   
     <li class="md-tabs__item">
-      <a href="../installation/" class="md-tabs__link">
+      <a href="../setup/" class="md-tabs__link">
         
   
   
     
   
-  Installation
+  Client Setup
 
       </a>
     </li>
@@ -279,25 +279,6 @@
   
 
       
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../development/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Development
-
-      </a>
-    </li>
-  
-
-      
     </ul>
   </div>
 </nav>
@@ -330,7 +311,7 @@
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/yourusername/bigquery-mcp" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/aicayzer/bigquery-mcp" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
@@ -350,12 +331,12 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Home
+    Installation
     
   </span>
   
@@ -372,12 +353,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../setup/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Installation
+    Client Setup
     
   </span>
   
@@ -444,6 +425,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#parameter-types-and-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameter Types and Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#discovery-tools" class="md-nav__link">
     <span class="md-ellipsis">
       Discovery Tools
@@ -529,9 +519,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#execute_queryquery-format-max_rows-timeout-dry_run-parameters" class="md-nav__link">
+  <a href="#execute_queryquery-format-limit-timeout-dry_run-parameters" class="md-nav__link">
     <span class="md-ellipsis">
-      execute_query(query, format, max_rows, timeout, dry_run, parameters)
+      execute_query(query, format, limit, timeout, dry_run, parameters)
     </span>
   </a>
   
@@ -581,28 +571,6 @@
   
 
     
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../development/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Development
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
   </ul>
 </nav>
                   </div>
@@ -628,6 +596,15 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#parameter-types-and-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameter Types and Validation
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#discovery-tools" class="md-nav__link">
@@ -715,9 +692,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#execute_queryquery-format-max_rows-timeout-dry_run-parameters" class="md-nav__link">
+  <a href="#execute_queryquery-format-limit-timeout-dry_run-parameters" class="md-nav__link">
     <span class="md-ellipsis">
-      execute_query(query, format, max_rows, timeout, dry_run, parameters)
+      execute_query(query, format, limit, timeout, dry_run, parameters)
     </span>
   </a>
   
@@ -758,6 +735,14 @@
 
 <h1 id="bigquery-mcp-tools-reference">BigQuery MCP Tools Reference<a class="headerlink" href="#bigquery-mcp-tools-reference" title="Permanent link">&para;</a></h1>
 <p>This document provides detailed documentation for all available MCP tools in the BigQuery MCP Server.</p>
+<h2 id="parameter-types-and-validation">Parameter Types and Validation<a class="headerlink" href="#parameter-types-and-validation" title="Permanent link">&para;</a></h2>
+<p>All tools perform automatic parameter type conversion to ensure compatibility with MCP protocol:</p>
+<ul>
+<li><strong>Integers</strong>: String values are automatically converted to integers (e.g., "100" → 100)</li>
+<li><strong>Booleans</strong>: String values are converted to booleans (e.g., "true" → true)</li>
+<li><strong>Arrays</strong>: JSON string arrays are parsed automatically</li>
+<li><strong>Optional Parameters</strong>: Marked as optional in tool descriptions</li>
+</ul>
 <h2 id="discovery-tools">Discovery Tools<a class="headerlink" href="#discovery-tools" title="Permanent link">&para;</a></h2>
 <h3 id="list_projects">list_projects()<a class="headerlink" href="#list_projects" title="Permanent link">&para;</a></h3>
 <p>Lists all configured BigQuery projects that this server can access.</p>
@@ -1000,12 +985,12 @@
 <span class="p">}</span>
 </code></pre></div></p>
 <h2 id="query-execution">Query Execution<a class="headerlink" href="#query-execution" title="Permanent link">&para;</a></h2>
-<h3 id="execute_queryquery-format-max_rows-timeout-dry_run-parameters">execute_query(query, format, max_rows, timeout, dry_run, parameters)<a class="headerlink" href="#execute_queryquery-format-max_rows-timeout-dry_run-parameters" title="Permanent link">&para;</a></h3>
+<h3 id="execute_queryquery-format-limit-timeout-dry_run-parameters">execute_query(query, format, limit, timeout, dry_run, parameters)<a class="headerlink" href="#execute_queryquery-format-limit-timeout-dry_run-parameters" title="Permanent link">&para;</a></h3>
 <p>Executes SELECT queries with comprehensive safety validation.</p>
 <p><strong>Parameters</strong>:
 - <code>query</code> (str): SQL SELECT query to execute
 - <code>format</code> (str, optional): Output format - 'json', 'csv', or 'table'. Default: 'json'
-- <code>max_rows</code> (int, optional): Maximum rows to return. Default: from config (20)
+- <code>limit</code> (int, optional): Maximum rows to return. Default: from config (20)
 - <code>timeout</code> (int, optional): Query timeout in seconds. Default: from config (60)
 - <code>dry_run</code> (bool, optional): Validate and estimate cost without executing. Default: false
 - <code>parameters</code> (dict, optional): Named query parameters as {name: value}</p>
