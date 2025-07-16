@@ -28,6 +28,9 @@ class BigQueryClient:
         """Initialize BigQuery client with configuration."""
         self.config = config or get_config()
         self._client = None
+        # Simple context tracking for better UX
+        self._last_project = None
+        self._last_dataset = None
         self._initialize_client()
 
     def _initialize_client(self) -> None:

@@ -156,7 +156,7 @@ class TestResultFormatting:
         nested = {"key": datetime(2023, 1, 1), "values": [Decimal("1.5"), None]}
         serialized = _serialize_value(nested)
         assert serialized["key"] == "2023-01-01T00:00:00"
-        assert serialized["values"] == [1.5, None]
+        assert serialized["values"] == [1.5]  # None values filtered out for BigQuery compatibility
 
 
 class TestExecuteQuery:

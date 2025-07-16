@@ -125,6 +125,10 @@ def main():
             mcp, handle_error, bq_client, config, formatter
         )
 
+        # Verify tool registration
+        registered_tools = [tool.name for tool in mcp.tools]
+        logger.info(f"Registered {len(registered_tools)} tools: {', '.join(registered_tools)}")
+
         # Run the MCP server
         logger.info("Starting BigQuery MCP server...")
         mcp.run()

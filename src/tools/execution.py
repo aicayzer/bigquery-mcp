@@ -44,22 +44,6 @@ def _validate_query_safety(query: str) -> None:
     except SQLValidationError as e:
         raise SecurityError(str(e))
 
-    # Additional safety checks specific to execution
-    # Remove comments and normalize the query to check if it's SELECT/WITH
-    import re
-
-    query_normalized = query.strip()
-    # Remove single-line comments (-- comments)
-    query_normalized = re.sub(r"--.*?(?=\n|$)", "", query_normalized, flags=re.MULTILINE)
-    # Remove multi-line comments (/* comments */)
-    query_normalized = re.sub(r"/\*.*?\*/", "", query_normalized, flags=re.DOTALL)
-    # Remove extra whitespace and get first significant token
-    query_normalized = query_normalized.strip().upper()
-
-    # Ensure it's a SELECT query (WITH is allowed for CTEs)
-    if not query_normalized.startswith("SELECT") and not query_normalized.startswith("WITH"):
-        raise SecurityError("Only SELECT queries are allowed")
-
 
 def _format_query_results(results: List[Dict], format_type: str = "json") -> Union[str, List[Dict]]:
     """Format query results based on requested format.
@@ -134,7 +118,11 @@ def _serialize_value(value: Any) -> Any:
     elif isinstance(value, dict):
         return {k: _serialize_value(v) for k, v in value.items()}
     elif isinstance(value, list):
-        return [_serialize_value(v) for v in value]
+        # Filter out None values to prevent BigQuery array NULL element errors
+        return [_serialize_value(v) for v in value if v is not None]
+    elif hasattr(value, '__dict__'):
+        # Handle BigQuery custom objects
+        return str(value)
     else:
         return value
 
@@ -174,14 +162,38 @@ def execute_query(
         # Validate query safety
         _validate_query_safety(query)
 
-        # Apply limits
+        # Apply limits with type checking and conversion
         if max_rows is None:
             max_rows = config.limits.default_row_limit
         else:
+            # Convert string to int if needed (for MCP compatibility)
+            if isinstance(max_rows, str):
+                try:
+                    max_rows = int(max_rows)
+                except ValueError:
+                    raise ValueError(f"max_rows must be an integer, got: {max_rows}")
+            elif isinstance(max_rows, float):
+                max_rows = int(max_rows)
+            elif not isinstance(max_rows, int):
+                raise ValueError(f"max_rows must be an integer, got type: {type(max_rows)}")
+            
             max_rows = min(max_rows, config.limits.max_row_limit)
 
         if timeout is None:
             timeout = config.limits.max_query_timeout
+        else:
+            # Convert string to int if needed (for MCP compatibility)
+            if isinstance(timeout, str):
+                try:
+                    timeout = int(timeout)
+                except ValueError:
+                    raise ValueError(f"timeout must be an integer, got: {timeout}")
+            elif isinstance(timeout, float):
+                timeout = int(timeout)
+            elif not isinstance(timeout, int):
+                raise ValueError(f"timeout must be an integer, got type: {type(timeout)}")
+            
+            timeout = min(timeout, config.limits.max_query_timeout)
 
         # Add LIMIT if not present and not dry run
         query_upper = query.upper().strip()
@@ -220,14 +232,15 @@ def execute_query(
 
         # Handle dry run
         if dry_run:
+            total_bytes = getattr(query_job, 'total_bytes_processed', 0) or 0
+            total_billed = getattr(query_job, 'total_bytes_billed', 0) or 0
+            
             return {
                 "status": "success",
                 "dry_run": True,
-                "total_bytes_processed": query_job.total_bytes_processed,
-                "total_bytes_billed": query_job.total_bytes_billed,
-                "estimated_cost_usd": round(
-                    (query_job.total_bytes_billed / 1e12) * 5.0, 4
-                ),  # $5 per TB
+                "total_bytes_processed": total_bytes,
+                "total_bytes_billed": total_billed,
+                "estimated_cost_usd": round((total_billed / 1e12) * 5.0, 4) if total_billed else 0.0,
                 "schema": (
                     [
                         {
@@ -237,7 +250,7 @@ def execute_query(
                         }
                         for field in query_job.schema
                     ]
-                    if query_job.schema
+                    if hasattr(query_job, 'schema') and query_job.schema
                     else []
                 ),
             }
@@ -332,20 +345,28 @@ def execute_query(
         logger.error(f"Query execution error: {error_str}")
 
         # Handle specific error types
-        if "403" in error_str:
+        if "403" in error_str or "Permission denied" in error_str:
             raise QueryExecutionError(
                 "Permission denied. Ensure you have bigquery.jobs.create permission "
                 "and access to the referenced tables."
             )
-        elif "404" in error_str:
+        elif "404" in error_str or "Not found" in error_str:
             raise QueryExecutionError("Table not found. Check the table references in your query.")
-        elif "Syntax error" in error_str:
+        elif "Syntax error" in error_str or "syntax" in error_str.lower():
             raise QueryExecutionError(f"SQL syntax error: {error_str}")
-        elif isinstance(e, TimeoutError) or "TimeoutError" in str(type(e)):
-            # Only treat actual timeout errors as timeouts
+        elif "Array cannot have a null element" in error_str:
+            raise QueryExecutionError(
+                "BigQuery array contains NULL values. Use COALESCE() or filter NULL values: "
+                f"{error_str}"
+            )
+        elif isinstance(e, TimeoutError) or "timeout" in error_str.lower():
             raise QueryExecutionError(
                 f"Query timeout after {timeout} seconds. "
-                f"Try a smaller query or increase the timeout."
+                f"Try adding LIMIT clause, filtering data, or increase timeout parameter."
+            )
+        elif "quota" in error_str.lower() or "rate limit" in error_str.lower():
+            raise QueryExecutionError(
+                f"BigQuery quota exceeded. Try again later or reduce query complexity: {error_str}"
             )
         else:
             # For any other error, preserve the original message

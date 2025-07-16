@@ -370,6 +370,19 @@ def analyze_columns(
     logger.info(f"Analyzing columns in table: {table}")
 
     try:
+        # Convert sample_size to int if needed (for MCP compatibility)
+        if isinstance(sample_size, str):
+            try:
+                sample_size = int(sample_size)
+            except ValueError:
+                raise ValueError(f"sample_size must be an integer, got: {sample_size}")
+        elif isinstance(sample_size, float):
+            sample_size = int(sample_size)
+        elif not isinstance(sample_size, int):
+            raise ValueError(f"sample_size must be an integer, got type: {type(sample_size)}")
+        
+        # Ensure reasonable bounds
+        sample_size = max(100, min(sample_size, 50000))  # Between 100 and 50K
         # Parse table path
         parts = table.split(".")
         if len(parts) == 3:
