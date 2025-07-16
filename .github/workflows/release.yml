@@ -7,6 +7,11 @@ on:
     paths:
       - 'pyproject.toml'
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
   check-version:
     runs-on: ubuntu-latest
@@ -15,7 +20,7 @@ jobs:
       should_release: ${{ steps.check_tag.outputs.should_release }}
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Fetch all history for tags
     
@@ -44,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Extract changelog section
       id: changelog
@@ -60,7 +65,7 @@ jobs:
         echo "Release notes extracted for version $VERSION"
     
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ needs.check-version.outputs.version }}
         name: Release ${{ needs.check-version.outputs.version }}
@@ -68,5 +73,4 @@ jobs:
         draft: false
         prerelease: false
         generate_release_notes: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
