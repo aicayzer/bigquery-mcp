@@ -1,0 +1,67 @@
+# BigQuery MCP Development Server Configuration
+# This configuration is specifically for development and testing
+
+server:
+  name: "BigQuery Development MCP"
+  version: "1.1.0-dev"
+
+# BigQuery configuration  
+bigquery:
+  # Default project for billing and unqualified table references
+  billing_project: "your-billing-project"
+
+  # BigQuery location/region
+  location: "US"
+
+  # Optional: Path to service account JSON key file
+  # If not provided, uses Application Default Credentials
+  service_account_path: ""
+
+# Project access control
+# Configure your development projects here
+projects:
+  - project_id: "your-dev-project"
+    project_name: "Development Project"
+    description: "Development and testing data"
+    datasets: ["dev_*", "test_*", "staging_*"]
+
+  - project_id: "your-analytics-project"
+    project_name: "Analytics Development"
+    description: "Analytics development workspace"
+    datasets: ["analytics_*", "experiments_*"]
+
+# Query execution limits (more permissive for development)
+limits:
+  # Maximum rows returned per query (0 = unlimited)
+  max_rows: 1000
+  
+  # Query timeout in seconds
+  max_query_timeout: 300
+  
+  # Maximum bytes processed per query (0 = unlimited)
+  max_bytes_processed: 10737418240  # 10GB
+  
+  # Require explicit LIMIT clause in queries
+  require_limit: false
+
+# SQL validation settings (relaxed for development)
+sql_validation:
+  # Banned keywords (case-insensitive)
+  banned_keywords: ["DROP", "DELETE", "UPDATE", "INSERT", "TRUNCATE", "ALTER", "CREATE"]
+  
+  # Allow only SELECT and WITH statements
+  allowed_statements: ["SELECT", "WITH"]
+  
+  # Remove SQL comments before validation
+  remove_comments: true
+
+# Development-specific features
+development:
+  # Enable development tools
+  tools_enabled: true
+  
+  # Enable verbose logging
+  verbose_logging: true
+  
+  # Allow experimental features
+  experimental_features: true

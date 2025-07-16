@@ -60,9 +60,12 @@ def initialize_server():
     global config, bq_client, formatter
 
     try:
-        # Load configuration
+        # Load configuration (support custom config file for development)
+        config_file = os.getenv("CONFIG_FILE")
         logger.info("Loading configuration...")
-        config = get_config()
+        if config_file:
+            logger.info(f"Using custom config file: {config_file}")
+        config = get_config(config_file)
 
         # Initialize BigQuery client
         logger.info("Initializing BigQuery client...")
