@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  bigquery-mcp-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: bigquery-mcp-v1.1.0-test
+    ports:
+      - "3001:3000"  # Use different port to avoid conflicts with existing deployment
+    environment:
+      # Override with test-specific settings
+      - LOG_LEVEL=DEBUG
+      - COMPACT_FORMAT=false
+      - DEVELOPMENT_TOOLS_ENABLED=true
+      # Mount your Google Cloud credentials
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account.json
+      # Or use your specific configuration
+      - BIGQUERY_PROJECT_ID=${BIGQUERY_PROJECT_ID}
+      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT}
+      - BIGQUERY_LOCATION=${BIGQUERY_LOCATION:-US}
+    volumes:
+      # Mount your service account credentials
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials/service-account.json:ro
+      # Mount config if you have a custom one
+      - ./config/config.yaml:/app/config/config.yaml:ro
+      # Mount logs for debugging
+      - ./logs:/app/logs
+    networks:
+      - bigquery-mcp-test-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.bigquery-mcp.version=1.1.0"
+      - "com.bigquery-mcp.environment=test"
+
+networks:
+  bigquery-mcp-test-network:
+    driver: bridge
+
+# Optional: Add a test client container for automated validation
+  test-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: bigquery-mcp-test-client
+    depends_on:
+      - bigquery-mcp-test
+    environment:
+      - MCP_SERVER_URL=http://bigquery-mcp-test:3000
+    volumes:
+      - ./VALIDATION_CONTEXT.md:/app/validation-context.md:ro
+      - ./tests:/app/tests:ro
+    networks:
+      - bigquery-mcp-test-network
+    profiles:
+      - test  # Only start with --profile test
+    command: ["python", "-m", "pytest", "/app/tests/", "-v", "--tb=short"]
