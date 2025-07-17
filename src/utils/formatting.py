@@ -94,22 +94,53 @@ class ResponseFormatter:
 
     def format_error(self, error: Exception) -> Dict[str, Any]:
         """
-        Format error response.
+        Format error response with AI-friendly information.
 
         Args:
             error: Exception to format
 
         Returns:
-            Error response dictionary
+            Error response dictionary with enhanced information
         """
         error_type = type(error).__name__
         error_message = str(error)
 
-        # Make error messages more user-friendly
-        if "Not found" in error_message:
-            error_message = self._improve_not_found_message(error_message)
+        # Check if this is an enhanced BigQueryMCPError
+        if hasattr(error, "error_source") and hasattr(error, "to_dict"):
+            # Use the enhanced error information
+            error_dict = error.to_dict()
 
-        return {"status": "error", "error_type": error_type, "error": error_message}
+            response = {
+                "status": "error",
+                "error_type": error_dict["error_type"],
+                "error": error_dict["message"],
+                "error_source": error_dict["error_source"],
+            }
+
+            # Add optional fields if available
+            if error_dict.get("error_code"):
+                response["error_code"] = error_dict["error_code"]
+
+            if error_dict.get("suggested_action"):
+                response["suggested_action"] = error_dict["suggested_action"]
+
+            # Add context in non-compact mode
+            if not self.compact_mode and error_dict.get("context"):
+                response["context"] = error_dict["context"]
+
+            return response
+        else:
+            # Fallback to original format for non-enhanced errors
+            # Make error messages more user-friendly
+            if "Not found" in error_message:
+                error_message = self._improve_not_found_message(error_message)
+
+            return {
+                "status": "error",
+                "error_type": error_type,
+                "error": error_message,
+                "error_source": "UNKNOWN",
+            }
 
     def format_table_info(self, table_info: Dict[str, Any]) -> Dict[str, Any]:
         """

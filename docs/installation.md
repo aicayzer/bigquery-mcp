@@ -245,10 +245,10 @@ If you encounter issues:
 1. Check the `logs/` directory in your project root for detailed error messages
 2. Verify your configuration matches the [examples](configuration.md)
 3. Test BigQuery access independently with `gcloud` or `bq` commands
-4. Review the [development guide](development.md) for debugging tips
+4. Review the setup guide for debugging tips
 
 ## Next Steps
 
 - [Configuration Guide](configuration.md) - Detailed configuration options
 - [Tools Reference](tools.md) - Available MCP tools and examples
-- [Integration Examples](index.md#integration-examples) - Claude Desktop and Cursor setup
+- [Client Setup Guide](setup.md) - Claude Desktop and Cursor setup

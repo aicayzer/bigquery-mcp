@@ -30,7 +30,7 @@ def sample_config():
                 "datasets": ["test_*", "sample_*"],
             }
         ],
-        "limits": {"default_limit": 20, "max_query_timeout": 60},
+        "limits": {"default_limit": 20, "max_query_timeout": 20},
         "security": {"banned_sql_keywords": ["CREATE", "DROP", "DELETE"]},
     }
 

@@ -64,23 +64,31 @@ def parse_arguments():
         epilog="""
 Examples:
   # Single project with all datasets
-  python src/server.py sandbox-dev:*
+  python src/server.py --project "sandbox-dev:*"
   
   # Multiple projects with specific patterns
-  python src/server.py sandbox-dev:dev_* sandbox-main:main_*
+  python src/server.py --project "sandbox-dev:dev_*" --project "sandbox-main:main_*"
   
-  # Multiple patterns for same project
-  python src/server.py cayzer-xyz:demo_* cayzer-xyz:analytics_*
+  # Multiple dataset patterns for same project
+  python src/server.py --project "cayzer-xyz:demo_*,analytics_*"
   
-  # Fallback to config file if no arguments
-  python src/server.py
+  # Complex enterprise usage with multiple projects and patterns
+  python src/server.py \\
+    --project "analytics-prod:user_*,session_*" \\
+    --project "logs-prod:application_*,system_*" \\
+    --billing-project "my-project" \\
+    --log-level INFO
+  
+  # Fallback to config file if no projects specified
+  python src/server.py --config config.yaml
         """,
     )
 
     parser.add_argument(
-        "projects",
-        nargs="*",
-        help="Project access patterns in format 'project_id:dataset_pattern' (e.g., 'sandbox-dev:dev_*')",
+        "--project",
+        action="append",
+        dest="projects",
+        help="Project access patterns in format 'project_id:dataset_pattern[:table_pattern]' (e.g., 'sandbox-dev:dev_*'). Can be used multiple times.",
     )
 
     parser.add_argument(
@@ -99,37 +107,149 @@ Examples:
         help="BigQuery location (default: EU)",
     )
 
+    # Logging configuration
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Logging level (default: INFO)",
+    )
+
+    parser.add_argument(
+        "--log-queries",
+        type=lambda x: x.lower() == "true",
+        default=True,
+        help="Log queries for audit purposes (default: true)",
+    )
+
+    parser.add_argument(
+        "--log-results",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Log query results - be careful with sensitive data (default: false)",
+    )
+
+    # Query execution limits
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=20,
+        help="Query timeout in seconds (default: 20)",
+    )
+
+    parser.add_argument(
+        "--max-limit",
+        type=int,
+        default=10000,
+        help="Maximum rows that can be requested (default: 10000)",
+    )
+
+    parser.add_argument(
+        "--max-bytes-processed",
+        type=int,
+        default=1073741824,
+        help="Maximum bytes that will be processed for cost control (default: 1073741824 = 1GB)",
+    )
+
+    # Response formatting
+    parser.add_argument(
+        "--compact-format",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Use compact response format (default: false)",
+    )
+
+    # Security settings
+    parser.add_argument(
+        "--select-only",
+        type=lambda x: x.lower() == "true",
+        default=True,
+        help="Allow only SELECT statements (default: true)",
+    )
+
+    parser.add_argument(
+        "--require-explicit-limits",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Require explicit LIMIT clause in SELECT queries (default: false)",
+    )
+
+    parser.add_argument(
+        "--banned-keywords",
+        default="CREATE,DELETE,DROP,TRUNCATE,ALTER,INSERT,UPDATE",
+        help="Comma-separated list of banned SQL keywords (default: CREATE,DELETE,DROP,TRUNCATE,ALTER,INSERT,UPDATE)",
+    )
+
     parser.add_argument(
         "--version",
         action="version",
-        version="BigQuery MCP Server 1.1.0",
+        version="BigQuery MCP Server 1.1.1",
     )
 
     return parser.parse_args()
 
 
 def parse_project_patterns(project_args):
-    """Parse project:dataset patterns from command line arguments."""
+    """Parse project:dataset:table patterns from command line arguments.
+
+    Supports formats:
+    - project_id:*                              (all datasets)
+    - project_id:dataset_pattern                (specific dataset patterns)
+    - project_id:dataset_pattern:table_pattern  (dataset and table patterns)
+    - project_id:dataset1,dataset2:table1,table2 (multiple patterns)
+
+    Args:
+        project_args: List of project pattern strings
+
+    Returns:
+        Dict mapping project_id to list of dataset patterns
+    """
     projects = {}
 
     for pattern in project_args:
         if ":" not in pattern:
             logger.error(
-                f"Invalid project pattern '{pattern}'. Expected format: 'project_id:dataset_pattern'"
+                f"Invalid project pattern '{pattern}'. Expected format: 'project_id:dataset_pattern[:table_pattern]'"
             )
             sys.exit(1)
 
-        project_id, dataset_pattern = pattern.split(":", 1)
+        # Split into components
+        parts = pattern.split(":", 2)  # Max 3 parts: project:dataset:table
 
-        if not project_id or not dataset_pattern:
+        if len(parts) < 2:
+            logger.error(
+                f"Invalid project pattern '{pattern}'. Expected format: 'project_id:dataset_pattern[:table_pattern]'"
+            )
+            sys.exit(1)
+
+        project_id = parts[0].strip()
+        dataset_part = parts[1].strip()
+        table_part = parts[2].strip() if len(parts) > 2 else None
+
+        if not project_id or not dataset_part:
             logger.error(
                 f"Invalid project pattern '{pattern}'. Both project_id and dataset_pattern are required"
             )
             sys.exit(1)
 
+        # Parse dataset patterns (comma-separated)
+        dataset_patterns = [p.strip() for p in dataset_part.split(",") if p.strip()]
+
+        if not dataset_patterns:
+            logger.error(f"Invalid project pattern '{pattern}'. Dataset pattern cannot be empty")
+            sys.exit(1)
+
+        # For now, we'll store dataset patterns as-is
+        # Table patterns will be handled in future enhancement
+        if table_part:
+            logger.warning(
+                f"Table patterns not yet fully implemented. Ignoring table pattern '{table_part}' for project '{project_id}'"
+            )
+
+        # Add to projects dict
         if project_id not in projects:
             projects[project_id] = []
-        projects[project_id].append(dataset_pattern)
+        projects[project_id].extend(dataset_patterns)
 
     return projects
 
@@ -153,14 +273,23 @@ def initialize_server():
                 project_patterns=project_patterns,
                 billing_project=args.billing_project,
                 location=args.location,
+                log_level=args.log_level,
+                log_queries=args.log_queries,
+                log_results=args.log_results,
+                timeout=args.timeout,
+                max_limit=args.max_limit,
+                max_bytes_processed=args.max_bytes_processed,
+                compact_format=args.compact_format,
+                select_only=args.select_only,
+                require_explicit_limits=args.require_explicit_limits,
+                banned_keywords=args.banned_keywords,
             )
         else:
-            # Fall back to config file with deprecation warning
-            logger.warning(
-                "DEPRECATED: Using config file. Please migrate to command-line arguments."
-            )
-            logger.warning("Example: python src/server.py sandbox-dev:dev_* sandbox-main:main_*")
+            # Use config file
             config = get_config(args.config)
+
+        # Log configuration source for debugging
+        config.log_configuration_source()
 
         # Initialize BigQuery client
         logger.info("Initializing BigQuery client...")

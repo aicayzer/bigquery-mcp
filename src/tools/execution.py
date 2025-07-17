@@ -10,7 +10,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter
 
-from utils.errors import QueryExecutionError, SecurityError, SQLValidationError
+from utils.errors import (
+    SecurityError,
+    SQLValidationError,
+    create_ai_friendly_error,
+)
 from utils.validation import SQLValidator
 
 logger = logging.getLogger(__name__)
@@ -349,33 +353,19 @@ def execute_query(
         error_str = str(e)
         logger.error(f"Query execution error: {error_str}")
 
-        # Handle specific error types
-        if "403" in error_str or "Permission denied" in error_str:
-            raise QueryExecutionError(
-                "Permission denied. Ensure you have bigquery.jobs.create permission "
-                "and access to the referenced tables."
-            )
-        elif "404" in error_str or "Not found" in error_str:
-            raise QueryExecutionError("Table not found. Check the table references in your query.")
-        elif "Syntax error" in error_str or "syntax" in error_str.lower():
-            raise QueryExecutionError(f"SQL syntax error: {error_str}")
-        elif "Array cannot have a null element" in error_str:
-            raise QueryExecutionError(
-                "BigQuery array contains NULL values. Use COALESCE() or filter NULL values: "
-                f"{error_str}"
-            )
-        elif isinstance(e, TimeoutError) or "timeout" in error_str.lower():
-            raise QueryExecutionError(
-                f"Query timeout after {timeout} seconds. "
-                f"Try adding LIMIT clause, filtering data, or increase timeout parameter."
-            )
-        elif "quota" in error_str.lower() or "rate limit" in error_str.lower():
-            raise QueryExecutionError(
-                f"BigQuery quota exceeded. Try again later or reduce query complexity: {error_str}"
-            )
-        else:
-            # For any other error, preserve the original message
-            raise QueryExecutionError(f"Query execution failed: {error_str}")
+        # Create AI-friendly error with context
+        context = {
+            "query_length": len(query),
+            "query_complexity": _estimate_query_complexity(query),
+            "timeout_used": timeout,
+            "limit_used": limit,
+            "dry_run": dry_run,
+        }
+
+        # Use the new AI-friendly error creation system
+        ai_friendly_error = create_ai_friendly_error(e, context)
+        logger.error(f"AI-friendly error: {ai_friendly_error.to_dict()}")
+        raise ai_friendly_error
 
 
 def _estimate_query_complexity(query: str) -> str:

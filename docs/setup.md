@@ -1,131 +1,278 @@
-# MCP Client Setup Guide
+# BigQuery MCP Server v1.1.1 - Complete Setup Guide
 
-This guide shows how to configure the BigQuery MCP server to work with various MCP clients.
+## 🎯 Overview
 
-## Prerequisites
+The BigQuery MCP Server now uses a **CLI-first architecture** with comprehensive configuration options. This guide covers both Docker and non-Docker setups for simple and enterprise use cases.
 
-1. **Docker Desktop** - Ensure Docker is installed and running
-2. **Google Cloud Authentication** - Set up using one of these methods:
-   ```bash
-   # Option 1: Application Default Credentials (recommended)
-   gcloud auth application-default login
+**Configuration Precedence**: CLI Arguments > Config File > Environment Variables > Defaults
 
-   # Option 2: Service Account JSON file
-   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-   ```
-3. **BigQuery Access** - Ensure your account has the necessary permissions
+## 🚀 Quick Setup (Docker - Recommended)
 
-## Setup Steps
-
-### Step 1: Build the Docker Image
-
+### Step 1: Authenticate with Google Cloud
 ```bash
-cd /path/to/bigquery-mcp
-docker-compose build
+# This gives you access to everything your account can access
+gcloud auth application-default login
 ```
 
-### Step 2: Test the Container
-
+### Step 2: Build the Docker Image
 ```bash
-# Test that the container starts correctly
-docker-compose run --rm bigquery-mcp
+# Clone the repository if you haven't already
+git clone https://github.com/aicayzer/bigquery-mcp.git
+cd bigquery-mcp
+
+# Build the image
+docker build -t bigquery-mcp:latest .
 ```
 
-You should see the BigQuery MCP server start. Press Ctrl+C to stop.
+### Step 3: Test the Server
+```bash
+# Simple test with one project
+docker run --rm -i \
+  --volume ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro \
+  --volume ./logs:/app/logs \
+  bigquery-mcp:latest \
+  python src/server.py \
+  --project "YOUR_PROJECT_ID:*" \
+  --billing-project "YOUR_PROJECT_ID"
+```
 
-### Step 3: Configure Your Client
+## 🎯 Claude Desktop Configuration
 
-## Claude Desktop
-
-**Location**: Claude Desktop → Settings → Developer → Edit Config
-
+### Option 1: Simple Setup (Single Project)
 ```json
 {
   "mcpServers": {
     "bigquery": {
       "command": "docker",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--env", "BIGQUERY_BILLING_PROJECT=your-billing-project",
-        "--env", "LOG_LEVEL=INFO",
-        "--env", "COMPACT_FORMAT=true",
-        "--volume", "/path/to/bigquery-mcp/config:/app/config:ro",
-        "--volume", "/path/to/bigquery-mcp/logs:/app/logs",
-        "--volume", "/Users/your-username/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
-        "bigquery-mcp:latest"
+        "run", "--rm", "-i",
+        "--volume", "/Users/YOUR_USERNAME/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
+        "--volume", "/ABSOLUTE/PATH/TO/bigquery-mcp/logs:/app/logs",
+        "bigquery-mcp:latest",
+        "python", "src/server.py",
+        "--project", "your-project-id:*",
+        "--billing-project", "your-project-id",
+        "--log-level", "INFO",
+        "--compact-format", "true"
       ]
     }
   }
 }
 ```
 
-## Cursor IDE
-
-**Location**: Cursor Settings → Extensions → MCP Servers → Edit Configuration
-
+### Option 2: Enterprise Setup (Multiple Projects)
 ```json
 {
   "mcpServers": {
     "bigquery": {
       "command": "docker",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--env", "BIGQUERY_BILLING_PROJECT=your-billing-project",
-        "--env", "LOG_LEVEL=INFO",
-        "--env", "COMPACT_FORMAT=true",
-        "--volume", "/path/to/bigquery-mcp/config:/app/config:ro",
-        "--volume", "/path/to/bigquery-mcp/logs:/app/logs",
-        "--volume", "/Users/your-username/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
-        "bigquery-mcp:latest"
+        "run", "--rm", "-i",
+        "--volume", "/Users/YOUR_USERNAME/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
+        "--volume", "/ABSOLUTE/PATH/TO/bigquery-mcp/logs:/app/logs",
+        "bigquery-mcp:latest",
+        "python", "src/server.py",
+        "--project", "analytics-prod:user_*,session_*",
+        "--project", "logs-prod:application_*,system_*",
+        "--project", "ml-dev:training_*,models_*",
+        "--billing-project", "my-billing-project",
+        "--log-level", "INFO",
+        "--compact-format", "true",
+        "--timeout", "300",
+        "--max-limit", "50000"
       ]
     }
   }
 }
 ```
 
-## Alternative: Python Setup
+### Option 3: Config File Approach
+```json
+{
+  "mcpServers": {
+    "bigquery": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "--volume", "/Users/YOUR_USERNAME/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
+        "--volume", "/ABSOLUTE/PATH/TO/bigquery-mcp/logs:/app/logs",
+        "--volume", "/ABSOLUTE/PATH/TO/bigquery-mcp/config:/app/config:ro",
+        "bigquery-mcp:latest",
+        "python", "src/server.py",
+        "--config", "/app/config/config.yaml"
+      ]
+    }
+  }
+}
+```
 
-If you prefer not to use Docker:
+## 🖥️ Non-Docker Setup (Advanced)
 
+### Prerequisites
+- Python 3.11+
+- Google Cloud SDK
+- Virtual environment (recommended)
+
+### Step 1: Install Dependencies
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Step 2: Authenticate
+```bash
+# Set up authentication
+gcloud auth application-default login
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account.json"  # Optional
+```
+
+### Step 3: Claude Desktop Configuration
 ```json
 {
   "mcpServers": {
     "bigquery": {
       "command": "python",
-      "args": ["/path/to/bigquery-mcp/src/server.py"],
+      "args": [
+        "/ABSOLUTE/PATH/TO/bigquery-mcp/src/server.py",
+        "--project", "your-project:*",
+        "--billing-project", "your-project"
+      ],
       "env": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/credentials.json",
-        "BIGQUERY_BILLING_PROJECT": "your-project-id"
+        "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/credentials.json"
       }
     }
   }
 }
 ```
 
-## Configuration Notes
+## 🔧 CLI Arguments Reference
 
-**Important**: Update the paths in the configuration:
-- Replace `/path/to/bigquery-mcp` with your actual project path
-- Replace `/Users/your-username/.config/gcloud` with your gcloud config path
-- Replace `your-billing-project` with your BigQuery billing project ID
+### Core Arguments
+- `--project` - Project patterns (can be repeated). Format: `project_id:dataset_pattern[:table_pattern]`
+- `--billing-project` - BigQuery billing project
+- `--config` - Path to configuration file (fallback if no projects specified)
 
-## Troubleshooting
+### Logging Options
+- `--log-level` - Logging level (DEBUG, INFO, WARNING, ERROR). Default: INFO
+- `--log-queries` - Log queries for audit (true/false). Default: true
+- `--log-results` - Log query results (true/false). Default: false
 
-### Container Won't Start
-- Check Docker is running: `docker info`
-- Verify the image exists: `docker images | grep bigquery-mcp`
-- Check logs: `docker-compose logs bigquery-mcp`
+### Performance & Limits
+- `--timeout` - Query timeout in seconds. Default: 60
+- `--max-limit` - Maximum rows that can be requested. Default: 10000
+- `--max-bytes-processed` - Maximum bytes processed (cost control). Default: 1073741824 (1GB)
 
-### Authentication Issues
-- Verify gcloud auth: `gcloud auth list`
-- Check credentials file exists: `ls -la ~/.config/gcloud/application_default_credentials.json`
-- Ensure billing project is correct in config
+### Security Options
+- `--select-only` - Allow only SELECT statements (true/false). Default: true
+- `--require-explicit-limits` - Require explicit LIMIT clause (true/false). Default: false
+- `--banned-keywords` - Comma-separated banned SQL keywords. Default: CREATE,DELETE,DROP,TRUNCATE,ALTER,INSERT,UPDATE
 
-### Path Issues
-- Use absolute paths in the Docker volume mounts
-- Ensure all paths exist and are readable
-- Check file permissions on mounted directories 
+### Formatting
+- `--compact-format` - Use compact response format (true/false). Default: false
+
+## 📋 Pattern Examples
+
+### Simple Patterns
+```bash
+# All datasets in a project
+--project "my-project:*"
+
+# Specific dataset patterns
+--project "my-project:analytics_*,logs_*"
+
+# Multiple projects
+--project "project1:*" --project "project2:staging_*"
+```
+
+### Enterprise Patterns
+```bash
+# Complex multi-project setup
+--project "analytics-prod:user_*,session_*,conversion_*" \
+--project "logs-prod:application_*,system_*,error_*" \
+--project "ml-dev:training_*,features_*,models_*" \
+--project "warehouse:daily_*,weekly_*,monthly_*"
+```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+#### 1. Authentication Errors
+```
+Error: Permission denied
+```
+**Solution**: 
+- Run `gcloud auth application-default login`
+- Verify your service account has BigQuery permissions
+- Check that billing is enabled on your project
+
+#### 2. Table Not Found
+```
+Error: Table "table_name" must be qualified with a dataset
+```
+**Solution**: 
+- Use fully qualified table names: `project.dataset.table`
+- Verify the table exists in BigQuery console
+- Check your dataset patterns include the target dataset
+
+#### 3. Docker Volume Issues
+```
+Error: No such file or directory
+```
+**Solution**:
+- Use absolute paths in volume mounts
+- Ensure the gcloud config directory exists: `~/.config/gcloud`
+- Create logs directory: `mkdir -p logs`
+
+#### 4. Configuration Precedence Issues
+```
+Error: CLI arguments not taking effect
+```
+**Solution**:
+- Remember: CLI > Config File > Environment > Defaults
+- Use `--log-level DEBUG` to see configuration source
+- Check for typos in argument names
+
+### Debug Mode
+```bash
+# Enable debug logging to see configuration details
+--log-level DEBUG --log-queries true
+```
+
+### Verify Setup
+```bash
+# Test with a simple query
+docker run --rm -i \
+  --volume ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro \
+  bigquery-mcp:latest \
+  python src/server.py \
+  --project "your-project:*" \
+  --billing-project "your-project" \
+  --log-level DEBUG
+```
+
+## 📚 Additional Resources
+
+- [Configuration Documentation](configuration.md)
+- [Tool Reference](tools.md)
+- Docker setup instructions are included above
+- [GitHub Repository](https://github.com/aicayzer/bigquery-mcp)
+
+## 🆘 Getting Help
+
+If you encounter issues:
+
+1. **Check the logs**: `tail -f logs/bigquery_mcp.log`
+2. **Enable debug mode**: `--log-level DEBUG`
+3. **Verify authentication**: `gcloud auth list`
+4. **Test BigQuery access**: `bq ls` (should list your projects)
+5. **Check Claude Desktop logs**: Look for MCP connection errors
+
+For additional support, please open an issue on the GitHub repository with:
+- Your configuration (with sensitive data removed)
+- Error messages from logs
+- Steps to reproduce the issue 

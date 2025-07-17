@@ -1,7 +1,3 @@
----
-description: BigQuery MCP Development Standards
-alwaysApply: true
----
 # BigQuery MCP Development Standards
 
 ## Code Quality
@@ -33,6 +29,12 @@ alwaysApply: true
 - Use clear, direct language - no fluff or emojis
 - Focus on what users need to know, not implementation details
 
+## Changelog Formatting
+- Use clean, elegant formatting without bold text
+- Write concise, descriptive entries
+- No unnecessary formatting or emphasis
+- Keep entries focused on what actually changed
+
 ## Architecture
 - Prefer command-line arguments over config files
 - Keep dependencies minimal
@@ -42,4 +44,11 @@ alwaysApply: true
 ## Error Handling
 - Use custom exception classes for specific error types
 - Provide actionable error messages
-- Log errors appropriately for debugging 
+- Log errors appropriately for debugging
+
+## User Preferences
+- Avoid over-engineering and unnecessary complexity
+- Don't overthink security implementations unless specifically requested
+- Focus on what's needed, not what could be possible
+- Maintain high repository standards suitable for GitHub
+- Keep configuration clean with proper .example files and gitignored personal configs 

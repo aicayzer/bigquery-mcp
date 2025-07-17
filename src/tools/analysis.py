@@ -534,10 +534,10 @@ def analyze_columns(
                     analysis_query,
                     job_config=QueryJobConfig(
                         use_query_cache=True,
-                        job_timeout_ms=60000,  # 60 second timeout
+                        job_timeout_ms=20000,  # 20 second timeout
                     ),
                 )
-                query_results = list(query_job.result(timeout=60))
+                query_results = list(query_job.result(timeout=20))
 
                 if not query_results:
                     logger.warning(f"No results returned for column {col_name}")
