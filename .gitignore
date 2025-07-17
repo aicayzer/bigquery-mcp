@@ -51,11 +51,11 @@ coverage.xml
 .env.local
 .env.*.local
 
-# Configuration
+# Configuration files (contain personal project IDs)
 config/config.yaml
 config/config.dev.yaml
 
-# Docker Compose (contains personal project IDs)
+# Docker Compose files (contain personal project IDs)
 docker-compose.yml
 docker-compose.dev.yml
 
@@ -69,6 +69,7 @@ development-notes/
 # Tasks file
 TASKS.md
 TESTING.md
+SETUP-GUIDE.md
 
 # OS files
 .DS_Store

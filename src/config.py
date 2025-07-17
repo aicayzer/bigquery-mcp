@@ -44,7 +44,7 @@ class LimitsConfig:
     """Query and response limits configuration."""
 
     default_limit: int = 20
-    max_query_timeout: int = 60
+    max_query_timeout: int = 20
     max_limit: int = 10000
     max_bytes_processed: int = 1073741824  # 1GB
 
@@ -65,6 +65,7 @@ class Config:
             config_path = self._find_config_file()
 
         self.config_path = config_path
+        self._from_cli_args = False  # Indicate this instance was created from config file
         self._raw_config = self._load_yaml(config_path)
         self._parse_config()
         self._apply_env_overrides()
@@ -75,15 +76,26 @@ class Config:
         project_patterns: Dict[str, List[str]],
         billing_project: Optional[str] = None,
         location: str = "EU",
+        log_level: str = "INFO",
+        log_queries: bool = True,
+        log_results: bool = False,
+        timeout: int = 20,
+        max_limit: int = 10000,
+        max_bytes_processed: int = 1073741824,
+        compact_format: bool = False,
+        select_only: bool = True,
+        require_explicit_limits: bool = False,
+        banned_keywords: str = "CREATE,DELETE,DROP,TRUNCATE,ALTER,INSERT,UPDATE",
     ):
         """Create configuration from command-line arguments."""
         instance = cls.__new__(cls)
         instance.config_path = None
         instance._raw_config = {}
+        instance._from_cli_args = True  # Indicate that this instance was created from CLI args
 
         # Server info
         instance.server_name = "BigQuery MCP Server"
-        instance.server_version = "1.1.0"
+        instance.server_version = "1.1.1"
 
         # BigQuery settings
         instance.billing_project = billing_project or os.getenv("BIGQUERY_BILLING_PROJECT", "")
@@ -102,39 +114,30 @@ class Config:
                 )
             )
 
-        # Default security settings
+        # Security settings from CLI args
+        banned_keywords_list = [kw.strip().upper() for kw in banned_keywords.split(",")]
         instance.security = SecurityConfig(
-            banned_sql_keywords=[
-                "CREATE",
-                "DELETE",
-                "DROP",
-                "TRUNCATE",
-                "INSERT",
-                "UPDATE",
-                "ALTER",
-                "GRANT",
-                "REVOKE",
-                "MERGE",
-            ],
-            select_only=True,
-            require_explicit_limits=False,
+            banned_sql_keywords=banned_keywords_list,
+            select_only=select_only,
+            require_explicit_limits=require_explicit_limits,
         )
 
-        # Default limits
+        # Limits from CLI args
         instance.limits = LimitsConfig(
-            default_limit=20,
-            max_query_timeout=60,
-            max_limit=10000,
-            max_bytes_processed=1073741824,  # 1GB
+            default_limit=20,  # Keep default for backward compatibility
+            max_query_timeout=timeout,
+            max_limit=max_limit,
+            max_bytes_processed=max_bytes_processed,
         )
 
-        # Default formatting
+        # Formatting from CLI args
         instance.formatting = FormattingConfig(
-            compact_format=os.getenv("COMPACT_FORMAT", "").lower() == "true",
+            compact_format=compact_format,
         )
 
-        # Default logging
-        instance.log_queries = True
+        # Logging from CLI args
+        instance.log_queries = log_queries
+        instance.log_results = log_results
 
         # Apply environment overrides
         instance._apply_env_overrides()
@@ -252,30 +255,69 @@ class Config:
         # Logging
         logging_dict = self._raw_config.get("logging", {})
         self.log_queries = logging_dict.get("log_queries", True)
+        self.log_results = logging_dict.get("log_results", False)
 
     def _apply_env_overrides(self) -> None:
-        """Apply environment variable overrides."""
+        """Apply environment variable overrides.
+
+        This method applies environment variable overrides to the configuration.
+        Note: CLI arguments (when using from_cli_args) take precedence over both
+        config file and environment variables.
+        """
         # Billing project
         if env_billing := os.getenv("BIGQUERY_BILLING_PROJECT"):
-            self.billing_project = env_billing
-            logger.info(f"Overriding billing project from env: {env_billing}")
+            if not self.billing_project:  # Only override if not already set
+                self.billing_project = env_billing
+                logger.info(f"Using billing project from env: {env_billing}")
 
         # Service account
         if env_creds := os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-            self.service_account_path = env_creds
-            logger.info("Using service account from GOOGLE_APPLICATION_CREDENTIALS")
+            if not self.service_account_path:  # Only override if not already set
+                self.service_account_path = env_creds
+                logger.info("Using service account from GOOGLE_APPLICATION_CREDENTIALS")
 
         # Location
         if env_location := os.getenv("BIGQUERY_LOCATION"):
-            self.location = env_location
-            logger.info(f"Overriding location from env: {env_location}")
+            if self.location == "EU":  # Only override if using default
+                self.location = env_location
+                logger.info(f"Using location from env: {env_location}")
 
-        # Compact format
+        # Compact format (only if not explicitly set)
         if env_compact := os.getenv("COMPACT_FORMAT"):
-            self.formatting.compact_format = env_compact.lower() == "true"
-            logger.info(f"Overriding compact format from env: {self.formatting.compact_format}")
+            # For CLI args, this would have been set explicitly, so only override for config file usage
+            if hasattr(self, "_from_cli_args") and not self._from_cli_args:
+                self.formatting.compact_format = env_compact.lower() == "true"
+                logger.info(f"Using compact format from env: {self.formatting.compact_format}")
 
-        # Log level is handled by logging setup, not here
+        # Log level (handled by logging setup in server.py)
+        # Additional environment variables for comprehensive support
+        if env_log_queries := os.getenv("LOG_QUERIES"):
+            if not hasattr(self, "_from_cli_args") or not self._from_cli_args:
+                self.log_queries = env_log_queries.lower() == "true"
+                logger.info(f"Using log_queries from env: {self.log_queries}")
+
+        if env_log_results := os.getenv("LOG_RESULTS"):
+            if not hasattr(self, "_from_cli_args") or not self._from_cli_args:
+                self.log_results = env_log_results.lower() == "true"
+                logger.info(f"Using log_results from env: {self.log_results}")
+
+    def log_configuration_source(self) -> None:
+        """Log the source of configuration values for debugging."""
+        logger.info("Configuration precedence: CLI > Config File > Environment > Defaults")
+
+        if hasattr(self, "_from_cli_args") and self._from_cli_args:
+            logger.info("Configuration source: CLI arguments (highest precedence)")
+        elif self.config_path:
+            logger.info(
+                f"Configuration source: Config file ({self.config_path}) + Environment overrides"
+            )
+        else:
+            logger.info("Configuration source: Environment variables + Defaults")
+
+        logger.info(
+            f"Final configuration: billing_project={self.billing_project}, "
+            f"location={self.location}, compact_format={self.formatting.compact_format}"
+        )
 
     def get_project(self, project_id: str) -> Optional[ProjectConfig]:
         """Get project configuration by ID."""

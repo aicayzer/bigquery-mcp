@@ -1,97 +1,51 @@
 # BigQuery MCP Server
 
-A production-ready Model Context Protocol server that provides secure, cross-project access to BigQuery datasets. Built with FastMCP for Python, enabling LLMs to explore data, analyze schemas, and execute queries across multiple Google Cloud projects.
+Production-ready Model Context Protocol server for secure BigQuery access across multiple Google Cloud projects.
 
-## Key Features
+## Features
 
-- **Cross-Project Access** - Query data across multiple BigQuery projects with a single connection
-- **Advanced Analytics** - Column-level analysis for nulls, cardinality, and data quality
-- **Safety Controls** - SQL validation, query limits, and read-only operations
-- **Token Optimization** - Compact response formats designed for LLM efficiency
-- **Flexible Configuration** - YAML-based project and dataset access control
-- **Docker Support** - Containerized deployment for easy integration
+- **Multi-Project Access** - Query across BigQuery projects with pattern matching
+- **Advanced Analytics** - Column analysis, data quality checks, schema exploration
+- **Security Controls** - SQL validation, query limits, read-only operations
+- **CLI-First Configuration** - Command-line arguments with config file fallback
+- **Docker Ready** - Containerized deployment for easy integration
 
 ## Quick Start
 
 ### Prerequisites
-
 - Python 3.11+
-- Google Cloud SDK with BigQuery access
-- Docker (optional, for containerized deployment)
+- Google Cloud SDK
+- Docker (optional)
 
-### Installation
+### Setup
 
-1. **Clone the repository:**
+1. **Clone and install:**
    ```bash
    git clone https://github.com/aicayzer/bigquery-mcp.git
    cd bigquery-mcp
-   ```
-
-2. **Install dependencies:**
-   ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure authentication:**
+2. **Authenticate:**
    ```bash
-   # Option 1: Application Default Credentials (recommended)
    gcloud auth application-default login
-
-   # Option 2: Service Account (for production)
-   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
    ```
 
-4. **Run the server:**
+3. **Run:**
    ```bash
-   # Using command-line arguments (recommended)
-   python src/server.py sandbox-dev:dev_* sandbox-main:main_*
+   # CLI (recommended)
+   python src/server.py --project "your-project:*" --billing-project "your-project"
    
-   # Or using config file (deprecated)
-   cp config/config.yaml.example config/config.yaml
-   # Edit config.yaml with your project details
-   python src/server.py
+   # Docker
+   docker build -t bigquery-mcp .
+   docker run -v ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro bigquery-mcp \
+     python src/server.py --project "your-project:*" --billing-project "your-project"
    ```
 
-### Docker Deployment
+## MCP Client Setup
 
-```bash
-# Using CLI arguments (recommended)
-docker-compose up bigquery-mcp-cli --build
-
-# Using config file (deprecated)
-docker-compose up bigquery-mcp-config --build
-
-# Custom project patterns
-docker run -it --rm \
-  -v ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro \
-  -e BIGQUERY_BILLING_PROJECT=your-project \
-  bigquery-mcp:latest \
-  python src/server.py your-project:your_dataset_*
-```
-
-## Available Tools
-
-The server provides 6 core tools for BigQuery interaction:
-
-### Discovery Tools
-- **`list_projects()`** - List configured BigQuery projects
-- **`list_datasets(project)`** - List datasets in a project
-- **`list_tables(dataset, table_type)`** - List tables in a dataset
-
-### Analysis Tools
-- **`analyze_table(table)`** - Get table structure and statistics
-- **`analyze_columns(table, columns, include_examples, sample_size)`** - Deep column analysis
-
-### Query Execution
-- **`execute_query(query, format, limit, timeout, dry_run, parameters)`** - Execute SELECT queries
-
-## Integration Examples
-
-### MCP Client Setup
-
-For complete setup instructions with Claude Desktop, Cursor IDE, and other MCP clients, see the **[Client Setup Guide](docs/setup.md)**.
-
-Quick Docker configuration example:
+### Claude Desktop
+Add to `~/.config/claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -99,89 +53,99 @@ Quick Docker configuration example:
       "command": "docker",
       "args": [
         "run", "--rm", "-i",
-        "--env", "BIGQUERY_BILLING_PROJECT=your-project",
-        "--volume", "~/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
+        "--volume", "/Users/YOUR_USERNAME/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
+        "--volume", "/ABSOLUTE/PATH/TO/bigquery-mcp/logs:/app/logs",
         "bigquery-mcp:latest",
-        "python", "src/server.py", "your-project:your_dataset_*"
+        "python", "src/server.py",
+        "--project", "your-project:*",
+        "--billing-project", "your-project"
       ]
     }
   }
 }
 ```
 
+### Cursor IDE
+Add to MCP settings:
+```json
+{
+  "bigquery": {
+    "command": "docker",
+    "args": [
+      "run", "--rm", "-i",
+      "--volume", "/Users/YOUR_USERNAME/.config/gcloud:/home/mcpuser/.config/gcloud:ro",
+      "bigquery-mcp:latest",
+      "python", "src/server.py",
+      "--project", "your-project:*",
+      "--billing-project", "your-project"
+    ]
+  }
+}
+```
+
+## Tools
+
+- **`list_projects()`** - List configured BigQuery projects
+- **`list_datasets(project)`** - List datasets in a project  
+- **`list_tables(dataset, table_type)`** - List tables in a dataset
+- **`analyze_table(table)`** - Get table structure and statistics
+- **`analyze_columns(table, columns, sample_size)`** - Deep column analysis
+- **`execute_query(query, format, limit, timeout)`** - Execute SELECT queries
+
+## Configuration
+
+### CLI Arguments
+```bash
+python src/server.py \
+  --project "analytics-prod:user_*,session_*" \
+  --project "logs-prod:application_*" \
+  --billing-project "my-billing-project" \
+  --log-level INFO \
+  --timeout 300 \
+  --max-limit 50000
+```
+
+### Config File (Optional)
+```yaml
+# config/config.yaml
+bigquery:
+  billing_project: "your-project"
+  location: "US"
+
+projects:
+  - project_id: "analytics-prod"
+    datasets: ["user_*", "session_*"]
+  - project_id: "logs-prod"  
+    datasets: ["application_*"]
+
+limits:
+  max_limit: 10000
+  max_query_timeout: 60
+```
+
 ## Documentation
 
-📚 **Complete Documentation**
-
-- **[Installation Guide](docs/installation.md)** - Detailed installation and setup
-- **[Client Setup Guide](docs/setup.md)** - Claude Desktop, Cursor IDE, and other MCP clients
-- **[Tools Reference](docs/tools.md)** - Complete tool documentation with examples
-- **[Configuration Guide](docs/configuration.md)** - YAML configuration and environment variables
-
-### Building Documentation Locally
-
-```bash
-# Install documentation dependencies
-pip install mkdocs mkdocs-material
-
-# Serve documentation locally
-mkdocs serve
-
-# Open http://localhost:8000 in your browser
-```
-
-## Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src tests/
-
-# Run specific test file
-pytest tests/unit/test_discovery.py
-```
+- **[Setup Guide](docs/setup.md)** - Detailed installation and configuration
+- **[AI Setup Assistant](docs/ai-setup.md)** - ChatGPT-powered configuration helper
+- **[Tools Reference](docs/tools.md)** - Complete API documentation
+- **[Configuration](docs/configuration.md)** - All configuration options
 
 ## Development
 
-
-
-### Code Quality
-
 ```bash
+# Install dev dependencies
+pip install -r requirements.txt
+
+# Run tests
+pytest
+
 # Format code
-ruff format src tests
+ruff format
 
-# Check and fix linting issues
-ruff check src tests --fix
+# Build docs
+mkdocs serve
 ```
-
-For development, follow the installation guide and use the standard Python development workflow.
-
-## Security & Safety
-
-- **Read-only operations** - Only SELECT queries and CTEs (WITH clauses) are allowed
-- **SQL validation** - Configurable banned keywords and safety checks
-- **Query limits** - Row limits, timeouts, and byte processing limits
-- **Project isolation** - Access control via YAML configuration
-- **No credentials in code** - Uses Google Cloud authentication
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-We welcome contributions! Please follow these guidelines:
-
-- Use `ruff format` and `ruff check --fix` before committing
-- Add tests for new functionality with `pytest`
-- Follow the existing code patterns and conventions
-- Update documentation for any user-facing changes
-
-## Support
-
-- 📖 [Documentation](docs/index.md)
-- 🐛 [Issue Tracker](https://github.com/aicayzer/bigquery-mcp/issues)
-- 💬 [Discussions](https://github.com/aicayzer/bigquery-mcp/discussions)
+MIT License - see [LICENSE](LICENSE) file.

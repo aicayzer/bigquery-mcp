@@ -1,31 +1,61 @@
 services:
-  # Example 1: Using CLI arguments (recommended)
-  bigquery-mcp-cli:
+  # BigQuery MCP Server - Single clean service supporting CLI-first architecture
+  bigquery-mcp:
     build: .
     image: bigquery-mcp:latest
-    container_name: bigquery-mcp-cli
-    command: ["python", "src/server.py", "your-project-id:dataset_pattern", "another-project:pattern_*"]
+    container_name: bigquery-mcp
+    command: ["python", "src/server.py", "--project", "your-project-id:*", "--billing-project", "your-billing-project"]
     volumes:
       - ./logs:/app/logs
       - ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro
+      # Optional: Mount config file for complex setups
+      - ./config:/app/config:ro
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - COMPACT_FORMAT=${COMPACT_FORMAT:-true}
-      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-your-billing-project}
+      # Note: CLI arguments take precedence over environment variables
+      - COMPACT_FORMAT=${COMPACT_FORMAT:-false}
+      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT:-}
     stdin_open: true
     tty: false
+    
+    # Example configurations for different use cases:
+    
+    # Simple usage (single project):
+    # command: ["python", "src/server.py", "--project", "my-project:*", "--billing-project", "my-project"]
+    
+    # Enterprise usage (multiple projects):
+    # command: [
+    #   "python", "src/server.py",
+    #   "--project", "analytics-prod:user_*,session_*",
+    #   "--project", "logs-prod:application_*,system_*", 
+    #   "--project", "ml-dev:training_*,models_*",
+    #   "--billing-project", "my-billing-project",
+    #   "--log-level", "INFO",
+    #   "--compact-format", "true",
+    #   "--timeout", "300"
+    # ]
+    
+    # Config file fallback (if no --project specified):
+    # command: ["python", "src/server.py", "--config", "/app/config/config.yaml"]
 
-  # Example 2: Using config file (deprecated)
-  bigquery-mcp-config:
-    build: .
-    image: bigquery-mcp:latest
-    container_name: bigquery-mcp-config
-    volumes:
-      - ./config:/app/config:ro
-      - ./logs:/app/logs
-      - ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro
-    environment:
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - COMPACT_FORMAT=${COMPACT_FORMAT:-true}
-    stdin_open: true
-    tty: false 
+# For development with additional debugging:
+# Uncomment the following service for development usage
+#  bigquery-mcp-dev:
+#    build: .
+#    image: bigquery-mcp-dev:latest
+#    container_name: bigquery-mcp-dev
+#    command: [
+#      "python", "src/server.py",
+#      "--project", "YOUR_DEV_PROJECT:*",
+#      "--billing-project", "YOUR_DEV_PROJECT", 
+#      "--log-level", "DEBUG",
+#      "--log-queries", "true",
+#      "--log-results", "true"
+#    ]
+#    volumes:
+#      - ./logs:/app/logs
+#      - ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro
+#    environment:
+#      - LOG_LEVEL=DEBUG
+#    stdin_open: true
+#    tty: false 

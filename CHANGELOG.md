@@ -5,56 +5,49 @@ All notable changes to the BigQuery MCP Server project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-07-17
+
+### Added
+- 20-second default timeout (reduced from 60 seconds) with configurable `--timeout` CLI argument
+- Clean configuration structure with proper .example files and gitignored personal configs
+- Comprehensive CLI arguments for all configuration options with proper precedence (CLI > Config > Env > Defaults)
+- Enterprise pattern system supporting multiple projects with dataset patterns
+- AI-friendly error messages with source classification and actionable suggestions
+
+### Fixed
+- Runtime crashes from missing `log_results` attribute in Config class
+- Error handling bugs in QueryExecutionError constructor
+- Configuration inconsistencies between config files and examples
+- Version management removed from config files (now code-only)
+- Configuration file structure inconsistencies
+- Docker setup confusion - simplified to single service architecture
+- Broken documentation links and outdated examples
+
+### Changed
+- Simplified Docker setup to single `bigquery-mcp` service
+- Moved setup guide from root to docs/setup.md
+- Updated README to be more concise and to-the-point
+- Cleaned up repository structure - removed redundant files
+
 ## [1.1.0] - 2025-07-16
 
 ### Added
-- Command-line argument support for project configuration
-  - Direct CLI specification of project:dataset patterns
-  - Preferred over config file approach for easier deployment
-  - Example: `python src/server.py project1:dataset_* project2:table_*`
-- Query progress indication and complexity estimation
-  - Query complexity estimation (simple, moderate, complex, very_complex)
-  - Execution time tracking and logging for performance monitoring
-  - Progress feedback for long-running queries
-- Comprehensive parameter documentation in tools.md
-  - All tool parameters documented with types and examples
-  - Automatic type conversion explanation for MCP protocol compatibility
-  - Error response format documentation
+- CLI argument support for project configuration with `project:dataset` patterns
+- Query complexity estimation and execution time tracking
+- Comprehensive parameter documentation
 
 ### Fixed
-- Critical parameter type validation errors ("max_rows must be integer")
-  - Automatic string-to-integer conversion for max_rows, timeout, sample_size parameters
-  - Enhanced parameter validation in execute_query() and analyze_columns()
-  - Fixed MCP protocol compatibility where agents pass strings instead of integers
-- analyze_columns intermittent failures ("No result received from client-side tool execution")
-  - Added SAFE.* functions to prevent calculation errors in BigQuery
-  - Implemented 60-second query timeouts with proper error handling
-  - Enhanced sampling queries with better NULL handling
-  - Improved fallback analysis for failed queries
-- Enhanced error handling with more specific and actionable error messages
-- Complex data type display issues (JSON/Array serialization)
-  - Enhanced _serialize_value() function with proper NULL filtering
-  - Fixed "Array cannot have a null element" errors in BigQuery results
+- Parameter type validation errors for MCP protocol compatibility
+- analyze_columns intermittent failures with enhanced NULL handling
+- Complex data type serialization issues
 - Parameter naming inconsistencies across configuration files
-  - Standardized to use `default_limit` and `max_limit` consistently
-  - Updated all config files, tests, and environment examples
 
 ### Changed
-- Consolidated validation logic - removed redundant query validation
-  - Eliminated duplicate validation between _validate_query_safety() and SQLValidator
-  - All SQL validation now consolidated into SQLValidator class
-- Improved tool registration with enhanced debugging and reliability
-- Both configuration file and CLI arguments supported for flexible deployment
+- Consolidated validation logic into SQLValidator class
+- Improved tool registration with enhanced debugging
 
 ### Removed
 - Duplicate and redundant tools for cleaner architecture
-  - Removed `list_allowed_projects()` - redundant with `list_projects()`
-  - Removed `list_accessible_projects()` - redundant functionality
-  - Removed `get_current_context()` - identified as unnecessary complexity
-  - Deleted entire `context.py` file containing overkill context management
-- Cleaned up temporary test files from repository root
-  - Deleted test_banned_keywords.py, test_execution_check.py, test_fix.py, test_union_validation.py
-  - All functionality preserved in proper unit test suite
 
 ## [1.0.0] - 2025-07-10
 

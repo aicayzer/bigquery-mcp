@@ -1,41 +1,101 @@
 # Configuration Guide
 
-This guide covers all configuration options for the BigQuery MCP Server.
+This guide covers all configuration options for the BigQuery MCP Server v1.1.1 with CLI-first architecture.
 
-## Command-Line Arguments (Recommended)
+## Command-Line Arguments (Primary Interface)
 
 The preferred way to configure the server is using command-line arguments:
 
 ```bash
-# Basic usage
-python src/server.py sandbox-dev:dev_* sandbox-main:main_*
+# Basic usage with new CLI-first format
+python src/server.py --project "your-project-1:dev_*" --project "your-project-2:main_*" --billing-project "your-billing-project"
+
+# Single project with all datasets
+python src/server.py --project "your-project:*" --billing-project "your-project"
 
 # Multiple patterns for same project
-python src/server.py cayzer-xyz:demo_* cayzer-xyz:analytics_*
+python src/server.py --project "your-project:demo_*,analytics_*" --billing-project "your-project"
 
-# All datasets in a project
-python src/server.py your-project:*
-
-# With additional options
-python src/server.py sandbox-dev:dev_* \
-  --billing-project cayzer-xyz \
-  --location EU
+# Enterprise usage with multiple projects and settings
+python src/server.py \
+  --project "analytics-prod:user_*,session_*" \
+  --project "logs-prod:application_*,system_*" \
+  --project "ml-dev:training_*,models_*" \
+  --billing-project "my-billing-project" \
+  --log-level "INFO" \
+  --compact-format "true" \
+  --timeout 300 \
+  --max-limit 50000
 ```
 
-### Command-Line Options
+## Complete CLI Arguments Reference
 
-- **Project patterns**: `project_id:dataset_pattern` format
-- **`--billing-project`**: Project ID for billing (overrides environment variable)
+### Core Arguments
+- **`--project`**: Project access patterns (can be repeated). Format: `project_id:dataset_pattern[:table_pattern]`
+- **`--billing-project`**: BigQuery billing project (overrides environment variable)
+- **`--config`**: Path to config file (fallback when no projects specified)
 - **`--location`**: BigQuery location (default: EU)
-- **`--config`**: Path to config file (fallback only)
-- **`--version`**: Show version information
 
-## Configuration File (Deprecated)
+### Logging Options
+- **`--log-level`**: Logging level (DEBUG, INFO, WARNING, ERROR). Default: INFO
+- **`--log-queries`**: Log queries for audit purposes (true/false). Default: true
+- **`--log-results`**: Log query results - be careful with sensitive data (true/false). Default: false
 
-For backward compatibility, the server still supports YAML configuration files:
+### Performance & Limits
+- **`--timeout`**: Query timeout in seconds. Default: 60
+- **`--max-limit`**: Maximum rows that can be requested. Default: 10000
+- **`--max-bytes-processed`**: Maximum bytes processed for cost control. Default: 1073741824 (1GB)
+
+### Security Options
+- **`--select-only`**: Allow only SELECT statements (true/false). Default: true
+- **`--require-explicit-limits`**: Require explicit LIMIT clause in SELECT queries (true/false). Default: false
+- **`--banned-keywords`**: Comma-separated list of banned SQL keywords. Default: CREATE,DELETE,DROP,TRUNCATE,ALTER,INSERT,UPDATE
+
+### Formatting
+- **`--compact-format`**: Use compact response format (true/false). Default: false
+
+## Configuration Precedence
+
+**CLI Arguments > Config File > Environment Variables > Hardcoded Defaults**
+
+This means CLI arguments always take precedence over config file settings, which take precedence over environment variables.
+
+## Project Pattern Examples
+
+### Simple Patterns
+```bash
+# All datasets in a project
+--project "my-project:*"
+
+# Specific dataset patterns
+--project "my-project:analytics_*,logs_*"
+
+# Multiple projects
+--project "project1:*" --project "project2:staging_*"
+```
+
+### Enterprise Patterns
+```bash
+# Complex multi-project setup
+--project "analytics-prod:user_*,session_*,conversion_*" \
+--project "logs-prod:application_*,system_*,error_*" \
+--project "ml-dev:training_*,features_*,models_*" \
+--project "warehouse:daily_*,weekly_*,monthly_*"
+```
+
+### Table Patterns (Future Enhancement)
+```bash
+# Table patterns will be supported in future versions
+--project "project:dataset:table_pattern"
+```
+
+## Configuration File (Fallback)
+
+For backward compatibility and complex setups, the server still supports YAML configuration files:
 
 ```bash
-cp config/config.yaml.example config/config.yaml
+# Use config file when no --project arguments provided
+python src/server.py --config config/config.yaml
 ```
 
 ## Complete Configuration Reference
@@ -45,30 +105,24 @@ cp config/config.yaml.example config/config.yaml
 ```yaml
 server:
   name: "BigQuery MCP Server"
-  version: "1.1.0"
+  version: "1.1.1"
 ```
-
-- **`name`**: Display name for the server (used in logs and responses)
-- **`version`**: Server version (should match the installed version)
 
 ### BigQuery Section
 
 ```yaml
 bigquery:
+  # Required: Project for billing
   billing_project: "your-billing-project"
-  location: "US"
-  service_account_path: ""
+  
+  # Optional: BigQuery location/region
+  location: "EU"
+  
+  # Optional: Service account path
+  service_account_path: "/path/to/service-account.json"
 ```
 
-- **`billing_project`**: Project ID used for billing BigQuery queries (required)
-- **`location`**: BigQuery location/region (default: "US")
-  - Common values: "US", "EU", "asia-northeast1"
-- **`service_account_path`**: Path to service account JSON file (optional)
-  - If not provided, uses Application Default Credentials
-
 ### Projects Section
-
-Define which BigQuery projects and datasets the server can access:
 
 ```yaml
 projects:
@@ -80,43 +134,31 @@ projects:
   - project_id: "raw-data-lake"
     project_name: "Raw Data Lake"
     description: "Raw data ingestion layer"
-    datasets: ["*"]  # Allow all datasets
-
-  - project_id: "ml-features"
-    project_name: "ML Feature Store"
-    description: "Machine learning features and training data"
-    datasets: ["features_*", "training_*", "models_*"]
+    datasets: ["*"]  # All datasets
 ```
-
-**Dataset Patterns:**
-- `"*"` - Allow all datasets in the project
-- `"dataset_name"` - Allow specific dataset
-- `"prefix_*"` - Allow datasets starting with prefix
-- `["dataset1", "dataset2"]` - Allow multiple specific datasets
 
 ### Limits Section
 
-Control query execution and resource usage:
-
 ```yaml
 limits:
+  # Default rows returned if not specified
   default_limit: 20
-  max_limit: 10000
+  
+  # Maximum query execution time in seconds
   max_query_timeout: 60
+  
+  # Maximum rows that can be requested
+  max_limit: 10000
+  
+  # Maximum bytes processed (cost control)
   max_bytes_processed: 1073741824  # 1GB
 ```
 
-- **`default_limit`**: Default number of rows returned (if not specified in query)
-- **`max_limit`**: Maximum rows that can be requested in a single query
-- **`max_query_timeout`**: Maximum query execution time in seconds
-- **`max_bytes_processed`**: Maximum bytes processed per query (for cost control)
-
 ### Security Section
-
-SQL safety and validation settings:
 
 ```yaml
 security:
+  # Banned SQL keywords
   banned_sql_keywords:
     - "CREATE"
     - "DELETE"
@@ -128,270 +170,103 @@ security:
     - "GRANT"
     - "REVOKE"
     - "MERGE"
-    - "CALL"
-    - "EXECUTE"
-    - "SCRIPT"
-  require_explicit_limits: false
+  
+  # Allow only SELECT statements
   select_only: true
+  
+  # Require explicit LIMIT clause
+  require_explicit_limits: false
 ```
-
-- **`banned_sql_keywords`**: SQL keywords that will cause query rejection
-- **`require_explicit_limits`**: If true, all SELECT queries must include LIMIT clause
-- **`select_only`**: If true, only SELECT statements and CTEs (WITH clauses) are allowed (recommended)
 
 ### Formatting Section
 
-Response formatting options:
-
 ```yaml
 formatting:
-  compact_mode: false
+  # Use compact format by default
+  compact_format: false
 ```
-
-- **`compact_mode`**: Use compact response format (reduces token usage)
-
-*Note: Field descriptions are always included in schema responses.*
 
 ### Logging Section
 
-Logging and audit configuration:
-
 ```yaml
 logging:
+  # Log queries for audit purposes
   log_queries: true
+  
+  # Log query results (be careful with sensitive data)
   log_results: false
-  max_query_log_length: 1000
 ```
-
-- **`log_queries`**: Log SQL queries for audit purposes
-- **`log_results`**: Log query results (be careful with sensitive data)
-- **`max_query_log_length`**: Maximum length of logged SQL queries
 
 ## Environment Variables
 
-Environment variables override YAML configuration values:
+The following environment variables are supported:
 
-### Core Settings
-
-```bash
-# BigQuery configuration
-export BIGQUERY_BILLING_PROJECT=your-billing-project
-export BIGQUERY_LOCATION=US
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-
-# Server behavior
-export LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR
-export COMPACT_FORMAT=true  # Override formatting.compact_mode
-```
-
-### Available Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BIGQUERY_BILLING_PROJECT` | Override billing project | From config |
-| `BIGQUERY_LOCATION` | Override BigQuery location | From config |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account JSON | Auto-detect |
-| `LOG_LEVEL` | Logging verbosity | INFO |
-| `COMPACT_FORMAT` | Enable compact mode | From config |
-
-## Configuration Examples
-
-### Development Setup
-
-For local development with personal projects:
-
-```yaml
-server:
-  name: "BigQuery MCP Development"
-  version: "1.1.0"
-
-bigquery:
-  billing_project: "my-dev-project"
-  location: "US"
-
-projects:
-  - project_id: "my-dev-project"
-    project_name: "Development Project"
-    description: "Personal development data"
-    datasets: ["*"]
-
-limits:
-  default_limit: 10
-  max_limit: 1000
-  max_query_timeout: 30
-  max_bytes_processed: 104857600  # 100MB
-
-formatting:
-  compact_mode: true
-
-logging:
-  log_queries: true
-  log_results: true  # OK for development
-```
-
-### Production Setup
-
-For production deployments with multiple projects:
-
-```yaml
-server:
-  name: "BigQuery MCP Production"
-  version: "1.1.0"
-
-bigquery:
-  billing_project: "analytics-billing"
-  location: "US"
-  service_account_path: "/app/credentials/service-account.json"
-
-projects:
-  - project_id: "data-warehouse"
-    project_name: "Data Warehouse"
-    description: "Production data warehouse"
-    datasets: ["prod_*", "reporting_*"]
-
-  - project_id: "analytics-sandbox"
-    project_name: "Analytics Sandbox"
-    description: "Analytics team sandbox"
-    datasets: ["sandbox_*", "experiments_*"]
-
-limits:
-  default_limit: 100
-  max_limit: 10000
-  max_query_timeout: 300  # 5 minutes
-  max_bytes_processed: 10737418240  # 10GB
-
-security:
-  banned_sql_keywords:
-    - "CREATE"
-    - "DELETE"
-    - "DROP"
-    - "INSERT"
-    - "UPDATE"
-    - "TRUNCATE"
-  require_explicit_limits: true
-  select_only: true
-
-formatting:
-  compact_mode: true
-
-logging:
-  log_queries: true  # Query length limited to 500 chars
-```
-
-### Multi-Region Setup
-
-For organizations with data in multiple regions:
-
-```yaml
-bigquery:
-  billing_project: "global-analytics"
-  location: "US"  # Default location
-
-projects:
-  - project_id: "us-data-warehouse"
-    project_name: "US Data Warehouse"
-    description: "US region data"
-    datasets: ["us_*"]
-
-  - project_id: "eu-data-warehouse"
-    project_name: "EU Data Warehouse"
-    description: "EU region data"
-    datasets: ["eu_*"]
-
-  - project_id: "asia-data-warehouse"
-    project_name: "Asia Data Warehouse"
-    description: "Asia region data"
-    datasets: ["asia_*"]
-```
+- **`BIGQUERY_BILLING_PROJECT`**: Default billing project
+- **`GOOGLE_APPLICATION_CREDENTIALS`**: Path to service account JSON
+- **`BIGQUERY_LOCATION`**: BigQuery location
+- **`LOG_LEVEL`**: Logging level
+- **`COMPACT_FORMAT`**: Use compact format (true/false)
+- **`LOG_QUERIES`**: Log queries (true/false)
+- **`LOG_RESULTS`**: Log results (true/false)
 
 ## Docker Configuration
 
-### Environment File
-
-Create a `.env` file for Docker deployments:
+### CLI-First Docker (Recommended)
 
 ```bash
-# .env file
-BIGQUERY_BILLING_PROJECT=your-billing-project
-BIGQUERY_LOCATION=US
-LOG_LEVEL=INFO
-COMPACT_FORMAT=true
+docker run --rm -i \
+  --volume ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro \
+  --volume ./logs:/app/logs \
+  bigquery-mcp:latest \
+  python src/server.py \
+  --project "your-project:*" \
+  --billing-project "your-project" \
+  --log-level "INFO"
 ```
 
 ### Docker Compose
-
-Use environment variables in `docker-compose.yml`:
 
 ```yaml
 services:
   bigquery-mcp:
     build: .
-    environment:
-      - BIGQUERY_BILLING_PROJECT=${BIGQUERY_BILLING_PROJECT}
-      - BIGQUERY_LOCATION=${BIGQUERY_LOCATION:-US}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - COMPACT_FORMAT=${COMPACT_FORMAT:-true}
+    image: bigquery-mcp:latest
+    container_name: bigquery-mcp
+    command: [
+      "python", "src/server.py",
+      "--project", "your-project:*",
+      "--billing-project", "your-project",
+      "--log-level", "INFO"
+    ]
     volumes:
-      - ./config:/app/config:ro
+      - ./logs:/app/logs
       - ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro
+    stdin_open: true
+    tty: false
 ```
 
-## Validation
+## Migration from v1.1.0
 
-### Configuration Validation
+If you're upgrading from v1.1.0:
 
-The server validates configuration on startup:
-
-- Required fields must be present
-- Project IDs must be valid
-- Numeric limits must be positive
-- Dataset patterns must be valid
-
-### Testing Configuration
-
-Test your configuration:
-
-```bash
-# Test configuration loading
-python -c "from src.config import load_config; print('Config OK')"
-
-# Test BigQuery access
-python -c "from src.client import BigQueryClient; client = BigQueryClient('config/config.yaml'); print('BigQuery OK')"
-```
+1. **Update CLI usage**: Change from `python src/server.py project:pattern` to `python src/server.py --project "project:pattern"`
+2. **Add new arguments**: Take advantage of new CLI options like `--log-level`, `--timeout`, etc.
+3. **Update Docker configs**: Use new CLI-first Docker approach
+4. **Check config files**: Ensure `log_results` attribute is present in config files
 
 ## Troubleshooting
 
-### Common Configuration Issues
+### Common Issues
 
-#### Invalid Project Access
+1. **Missing log_results attribute**: Update config files to include `log_results: false` in the logging section
+2. **CLI argument parsing**: Ensure you're using `--project` flag instead of positional arguments
+3. **Docker issues**: Use absolute paths for volume mounts and ensure gcloud auth is set up
+
+### Debug Mode
+
+```bash
+# Enable debug logging
+python src/server.py --project "your-project:*" --billing-project "your-project" --log-level DEBUG --log-queries true --log-results true
 ```
-Error: Project 'project-id' not found or access denied
-```
-**Solution:** Check project ID spelling and IAM permissions
 
-#### Dataset Pattern Errors
-```
-Error: No datasets match pattern 'invalid_*'
-```
-**Solution:** Verify dataset names and patterns in your BigQuery project
-
-#### Resource Limit Errors
-```
-Error: Query exceeded maximum bytes processed
-```
-**Solution:** Increase `max_bytes_processed` or optimize your query
-
-### Configuration Best Practices
-
-1. **Use environment variables** for sensitive values (project IDs, paths)
-2. **Set appropriate limits** based on your use case and costs
-3. **Use specific dataset patterns** rather than `"*"` where possible
-4. **Enable query logging** for audit purposes
-5. **Disable result logging** in production for security
-6. **Test configuration changes** in development first
-
-## Next Steps
-
-- [Tools Reference](tools.md) - Learn about available MCP tools
-- [Development Guide](development.md) - Set up development environment
-- [Installation Guide](installation.md) - Deployment options
+This will provide detailed information about configuration loading, query execution, and error handling.

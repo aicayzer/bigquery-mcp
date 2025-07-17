@@ -41,7 +41,7 @@ class TestQueryValidation:
         execution.config.security.require_explicit_limits = False
         execution.config.limits.default_limit = 100
         execution.config.limits.max_limit = 10000
-        execution.config.limits.max_query_timeout = 60
+        execution.config.limits.max_query_timeout = 20
         execution.config.limits.max_bytes_processed = 1073741824
 
         yield execution
@@ -141,7 +141,7 @@ class TestExecuteQuery:
         execution.config.security.require_explicit_limits = False
         execution.config.limits.default_limit = 100
         execution.config.limits.max_limit = 10000
-        execution.config.limits.max_query_timeout = 60
+        execution.config.limits.max_query_timeout = 20
         execution.config.limits.max_bytes_processed = 1073741824
         execution.config.log_queries = True
         execution.config.log_results = False
@@ -372,7 +372,7 @@ class TestExecuteQuery:
         with pytest.raises(QueryExecutionError) as exc_info:
             execute_query("SELECT * FROM dataset.table")
 
-        assert "Table not found" in str(exc_info.value)
+        assert "Resource not found" in str(exc_info.value)
 
 
 class TestToolRegistration:

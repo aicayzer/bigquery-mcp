@@ -5,6 +5,7 @@ site_url: https://github.com/aicayzer/bigquery-mcp
 nav:
   - Installation: installation.md
   - Client Setup: setup.md
+  - AI Setup Assistant: ai-setup.md
   - Tools Reference: tools.md
   - Configuration: configuration.md
 
