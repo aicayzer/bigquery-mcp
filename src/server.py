@@ -155,11 +155,7 @@ def initialize_server():
                 location=args.location,
             )
         else:
-            # Fall back to config file with deprecation warning
-            logger.warning(
-                "DEPRECATED: Using config file. Please migrate to command-line arguments."
-            )
-            logger.warning("Example: python src/server.py sandbox-dev:dev_* sandbox-main:main_*")
+            # Use config file
             config = get_config(args.config)
 
         # Initialize BigQuery client

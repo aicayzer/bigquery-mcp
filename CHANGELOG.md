@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Eliminated duplicate validation between _validate_query_safety() and SQLValidator
   - All SQL validation now consolidated into SQLValidator class
 - Improved tool registration with enhanced debugging and reliability
-- Configuration file approach marked as deprecated in favor of CLI arguments
+- Both configuration file and CLI arguments supported for flexible deployment
 
 ### Removed
 - Duplicate and redundant tools for cleaner architecture
