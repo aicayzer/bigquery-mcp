@@ -1,8 +1,10 @@
 site_name: BigQuery MCP Server
 site_description: A Model Context Protocol server for BigQuery with cross-project support
-site_url: https://github.com/aicayzer/bigquery-mcp
+site_url: https://aicayzer.github.io/bigquery-mcp/
+use_directory_urls: true
 
 nav:
+  - Home: index.md
   - Installation: installation.md
   - Client Setup: setup.md
   - AI Setup Assistant: ai-setup.md
@@ -11,6 +13,8 @@ nav:
 
 theme:
   name: material
+  logo: assets/bigquery-icon.svg
+  favicon: assets/bigquery-icon.svg
   palette:
     - scheme: default
       primary: white

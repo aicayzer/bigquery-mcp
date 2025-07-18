@@ -75,7 +75,7 @@ class TestDiscoveryIntegration:
         # Mock dataset details
         mock_dataset1_full = Mock(
             dataset_id="prod_sales",
-            location="US",
+            location="EU",
             created=datetime(2024, 1, 1),
             modified=datetime(2024, 6, 1),
             description="Production sales data",
@@ -84,7 +84,7 @@ class TestDiscoveryIntegration:
 
         mock_dataset2_full = Mock(
             dataset_id="test_experiments",
-            location="US",
+            location="EU",
             created=datetime(2024, 2, 1),
             modified=datetime(2024, 5, 1),
             description="A/B test results",
@@ -113,7 +113,7 @@ class TestDiscoveryIntegration:
             num_rows=1000000,
             num_bytes=52428800,  # 50MB
             description="Daily sales transactions",
-            location="US",
+            location="EU",
             schema=[Mock() for _ in range(10)],  # 10 fields
             time_partitioning=Mock(type_="DAY", field="sale_date"),
             clustering_fields=["region", "product_id"],
@@ -127,7 +127,7 @@ class TestDiscoveryIntegration:
             num_rows=24,
             num_bytes=1048576,  # 1MB
             description="Monthly aggregated sales",
-            location="US",
+            location="EU",
             schema=[Mock() for _ in range(5)],
             time_partitioning=None,
             clustering_fields=None,
@@ -141,7 +141,7 @@ class TestDiscoveryIntegration:
             num_rows=None,
             num_bytes=None,
             description="Sales grouped by region",
-            location="US",
+            location="EU",
             schema=[Mock() for _ in range(3)],
             time_partitioning=None,
             clustering_fields=None,

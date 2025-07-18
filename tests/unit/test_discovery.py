@@ -153,7 +153,7 @@ class TestListDatasets:
         # Mock dataset details
         mock_dataset1_full = Mock(
             dataset_id="test_dataset1",
-            location="US",
+            location="EU",
             created=datetime(2024, 1, 1),
             modified=datetime(2024, 1, 2),
             description="Test dataset 1",
@@ -194,7 +194,7 @@ class TestListDatasets:
         # Check first dataset
         ds1 = result["datasets"][0]
         assert ds1["dataset_id"] == "test_dataset1"
-        assert ds1["location"] == "US"
+        assert ds1["location"] == "EU"
         assert ds1["description"] == "Test dataset 1"
         assert "created" in ds1
         assert "modified" in ds1
@@ -280,7 +280,7 @@ class TestListTables:
             num_rows=1000,
             num_bytes=1048576,  # 1MB
             description="News articles",
-            location="US",
+            location="EU",
             schema=[Mock(), Mock()],  # 2 fields
             time_partitioning=None,
             clustering_fields=None,
@@ -294,7 +294,7 @@ class TestListTables:
             num_rows=None,
             num_bytes=None,
             description="Article summary view",
-            location="US",
+            location="EU",
             schema=[Mock()],  # 1 field
             time_partitioning=None,
             clustering_fields=None,

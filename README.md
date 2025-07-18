@@ -1,14 +1,18 @@
 # BigQuery MCP Server
 
-Production-ready Model Context Protocol server for secure BigQuery access across multiple Google Cloud projects.
+MCP server for secure BigQuery access across multiple Google Cloud projects.
 
 ## Features
 
 - **Multi-Project Access** - Query across BigQuery projects with pattern matching
 - **Advanced Analytics** - Column analysis, data quality checks, schema exploration
 - **Security Controls** - SQL validation, query limits, read-only operations
-- **CLI-First Configuration** - Command-line arguments with config file fallback
-- **Docker Ready** - Containerized deployment for easy integration
+- **CLI Configuration** - Command-line arguments with config file fallback
+- **Docker Support** - Containerized deployment for easy integration
+
+## Documentation
+
+Full documentation available at [aicayzer.github.io/bigquery-mcp](https://aicayzer.github.io/bigquery-mcp/)
 
 ## Quick Start
 
@@ -17,30 +21,17 @@ Production-ready Model Context Protocol server for secure BigQuery access across
 - Google Cloud SDK
 - Docker (optional)
 
-### Setup
+### Authentication
+```bash
+gcloud auth application-default login
+```
 
-1. **Clone and install:**
-   ```bash
-   git clone https://github.com/aicayzer/bigquery-mcp.git
-   cd bigquery-mcp
-   pip install -r requirements.txt
-   ```
-
-2. **Authenticate:**
-   ```bash
-   gcloud auth application-default login
-   ```
-
-3. **Run:**
-   ```bash
-   # CLI (recommended)
-   python src/server.py --project "your-project:*" --billing-project "your-project"
-   
-   # Docker
-   docker build -t bigquery-mcp .
-   docker run -v ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro bigquery-mcp \
-     python src/server.py --project "your-project:*" --billing-project "your-project"
-   ```
+### Installation
+```bash
+git clone https://github.com/aicayzer/bigquery-mcp.git
+cd bigquery-mcp
+pip install -r requirements.txt
+```
 
 ## MCP Client Setup
 
@@ -83,6 +74,27 @@ Add to MCP settings:
 }
 ```
 
+## Usage
+
+### CLI
+```bash
+# Single project
+python src/server.py --project "your-project:*" --billing-project "your-project"
+
+# Multiple projects with patterns
+python src/server.py \
+  --project "analytics-prod:user_*,session_*" \
+  --project "logs-prod:application_*" \
+  --billing-project "my-billing-project"
+```
+
+### Docker
+```bash
+docker build -t bigquery-mcp .
+docker run -v ~/.config/gcloud:/home/mcpuser/.config/gcloud:ro bigquery-mcp \
+  python src/server.py --project "your-project:*" --billing-project "your-project"
+```
+
 ## Tools
 
 - **`list_projects()`** - List configured BigQuery projects
@@ -101,50 +113,29 @@ python src/server.py \
   --project "logs-prod:application_*" \
   --billing-project "my-billing-project" \
   --log-level INFO \
-  --timeout 300 \
+  --timeout 20 \
   --max-limit 50000
 ```
 
 ### Config File (Optional)
 ```yaml
-# config/config.yaml
 bigquery:
   billing_project: "your-project"
-  location: "US"
+  location: "EU"
 
 projects:
   - project_id: "analytics-prod"
     datasets: ["user_*", "session_*"]
   - project_id: "logs-prod"  
     datasets: ["application_*"]
-
-limits:
-  max_limit: 10000
-  max_query_timeout: 60
 ```
 
-## Documentation
+## Contributing
 
-- **[Setup Guide](docs/setup.md)** - Detailed installation and configuration
-- **[AI Setup Assistant](docs/ai-setup.md)** - ChatGPT-powered configuration helper
-- **[Tools Reference](docs/tools.md)** - Complete API documentation
-- **[Configuration](docs/configuration.md)** - All configuration options
-
-## Development
-
-```bash
-# Install dev dependencies
-pip install -r requirements.txt
-
-# Run tests
-pytest
-
-# Format code
-ruff format
-
-# Build docs
-mkdocs serve
-```
+1. Fork the repository
+2. Create a feature branch from `develop`
+3. Make your changes with tests
+4. Submit a pull request to `develop`
 
 ## License
 

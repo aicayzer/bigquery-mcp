@@ -1,12 +1,12 @@
 # BigQuery MCP Server v1.1.1 - Complete Setup Guide
 
-## 🎯 Overview
+## Overview
 
 The BigQuery MCP Server now uses a **CLI-first architecture** with comprehensive configuration options. This guide covers both Docker and non-Docker setups for simple and enterprise use cases.
 
 **Configuration Precedence**: CLI Arguments > Config File > Environment Variables > Defaults
 
-## 🚀 Quick Setup (Docker - Recommended)
+## Quick Setup (Docker - Recommended)
 
 ### Step 1: Authenticate with Google Cloud
 ```bash
@@ -36,7 +36,7 @@ docker run --rm -i \
   --billing-project "YOUR_PROJECT_ID"
 ```
 
-## 🎯 Claude Desktop Configuration
+## Claude Desktop Configuration
 
 ### Option 1: Simple Setup (Single Project)
 ```json
@@ -106,7 +106,7 @@ docker run --rm -i \
 }
 ```
 
-## 🖥️ Non-Docker Setup (Advanced)
+## Non-Docker Setup (Advanced)
 
 ### Prerequisites
 - Python 3.11+
@@ -149,7 +149,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account.json"  # Op
 }
 ```
 
-## 🔧 CLI Arguments Reference
+## CLI Arguments Reference
 
 ### Core Arguments
 - `--project` - Project patterns (can be repeated). Format: `project_id:dataset_pattern[:table_pattern]`
@@ -174,7 +174,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account.json"  # Op
 ### Formatting
 - `--compact-format` - Use compact response format (true/false). Default: false
 
-## 📋 Pattern Examples
+## Pattern Examples
 
 ### Simple Patterns
 ```bash
@@ -197,7 +197,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account.json"  # Op
 --project "warehouse:daily_*,weekly_*,monthly_*"
 ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 

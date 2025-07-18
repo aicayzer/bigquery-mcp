@@ -77,7 +77,7 @@ After gathering the information, provide:
 - For Cursor, it goes in the MCP settings
 
 Start by asking: "Hi! I'll help you set up the BigQuery MCP Server. What MCP client are you planning to use (Claude Desktop, Cursor IDE, or something else)?"
-```
+````
 **PROMPT END**
 
 ---

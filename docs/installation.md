@@ -124,7 +124,7 @@ For production deployments:
 
    bigquery:
      billing_project: "your-billing-project"
-     location: "US"  # or "EU", "asia-northeast1", etc.
+     location: "EU"  # or "EU", "asia-northeast1", etc.
 
    projects:
      - project_id: "your-data-project"

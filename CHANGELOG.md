@@ -7,12 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.2] - 2025-07-18
 
+### Added
+- Contributing guidelines with develop branch workflow
+- Documentation index page with clean navigation
+- BigQuery icon integration in documentation
+
 ### Fixed
 - Race condition in tool registration causing intermittent "No server found with tool" errors
 - Improved initialization validation to prevent global variable timing issues
+- GitHub Actions CI to run on develop branch pull requests
 
 ### Changed
+- Default BigQuery location changed from US to EU
 - Cleaned up informal comments throughout codebase for better code quality
+- Updated documentation site with proper logo and favicon
 
 ## [1.1.1] - 2025-07-17
 
@@ -125,7 +133,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed black and flake8 configurations
   - Removed mypy from GitHub Actions workflow
 
-## [0.5.0] - 2025-01-07
+## [0.5.0] - 2025-07-07
 
 ### Added
 - Docker support with multi-stage build for production deployment
@@ -156,7 +164,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - TESTING.md (content integrated into README)
 
-## [0.4.7] - 2025-01-07
+## [0.4.7] - 2025-07-07
 
 ### Fixed
 - Fixed analyze_columns parameter validation issue by changing `columns` from Optional[List[str]] to string (comma-separated)
@@ -169,7 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified analyze_columns parameter handling for better FastMCP compatibility
 - analysis_method in response now shows 'RANDOM_SAMPLING' instead of 'TABLESAMPLE'
 
-## [0.4.6] - 2025-01-07
+## [0.4.6] - 2025-07-07
 
 ### Fixed
 - Fixed import path for FastMCP - changed from `mcp.server.fastmcp` to `fastmcp`
@@ -182,7 +190,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Removed outdated test_server_startup.py that referenced non-existent functions
 
-## [0.4.5] - 2025-01-07
+## [0.4.5] - 2025-07-07
 
 ### Fixed
 - Fixed TABLESAMPLE syntax in `analyze_columns` - now uses PERCENT instead of ROWS
@@ -290,7 +298,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The custom adapter interfered with FastMCP's built-in protocol handling
 - Version 0.4.2 properly fixes the issue
 
-## [0.4.0] - 2025-01-05
+## [0.4.0] - 2025-07-05
 
 ### Added
 - Query execution tools implementation:
@@ -312,7 +320,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Maximum bytes billed limit
 - Required LIMIT clause option
 
-## [0.3.0] - 2025-01-05
+## [0.3.0] - 2025-07-05
 
 ### Added
 - Analysis tools implementation:
@@ -331,7 +339,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Config file path resolution for Claude Desktop compatibility
 - Working directory issues when run from different locations
 
-## [0.2.0] - 2025-01-06
+## [0.2.0] - 2025-07-06
 
 ### Added
 - Discovery tools implementation:
@@ -348,7 +356,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated server.py to import and register discovery tools
 - Enhanced error messages with actionable suggestions
 
-## [0.1.0] - 2025-01-06
+## [0.1.0] - 2025-07-06
 
 ### Added
 - Initial project structure

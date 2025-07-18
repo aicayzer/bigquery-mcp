@@ -127,7 +127,7 @@ class TestAnalyzeTable:
         mock_table.created = datetime(2023, 1, 1)
         mock_table.modified = datetime(2023, 6, 1)
         mock_table.description = "Test table"
-        mock_table.location = "US"
+        mock_table.location = "EU"
         mock_table.labels = {"env": "test"}
         mock_table.table_type = "TABLE"
         mock_table.time_partitioning = None

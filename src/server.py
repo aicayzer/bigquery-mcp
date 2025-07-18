@@ -79,7 +79,7 @@ Examples:
     --billing-project "my-project" \\
     --log-level INFO
   
-  # Fallback to config file if no projects specified
+  # Use config file if no projects specified
   python src/server.py --config config.yaml
         """,
     )
@@ -239,7 +239,6 @@ def parse_project_patterns(project_args):
             logger.error(f"Invalid project pattern '{pattern}'. Dataset pattern cannot be empty")
             sys.exit(1)
 
-        # For now, we'll store dataset patterns as-is
         # Table patterns will be handled in future enhancement
         if table_part:
             logger.warning(
