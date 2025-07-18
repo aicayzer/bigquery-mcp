@@ -215,7 +215,7 @@ def execute_query(
                 query_parameters.append(param)
             job_config.query_parameters = query_parameters
 
-        # Log query if enabled
+        # Log query execution for audit trail
         if config.log_queries:
             log_query = query[:500]  # Limit query log length
             if len(query) > 500:
@@ -268,7 +268,7 @@ def execute_query(
             logger.error(f"Query failed after {execution_time:.2f} seconds: {e}")
             raise
 
-        # CRITICAL FIX: Get schema BEFORE consuming the iterator
+        # Get schema before consuming the iterator
         schema_fields = None
         if rows_iterator:
             # Get schema from row iterator (more reliable than query_job.schema for executed queries)
@@ -409,17 +409,18 @@ def _estimate_query_complexity(query: str) -> str:
 def register_execution_tools(
     mcp_server, error_handler, bigquery_client, configuration, response_formatter
 ):
-    """Register execution tools with the MCP server.
-
-    This function is called by server.py to inject dependencies and register tools.
-    """
+    """Register execution tools with the MCP server."""
     global mcp, handle_error, bq_client, config, formatter
 
+    # Set globals atomically to prevent race conditions
     mcp = mcp_server
     handle_error = error_handler
     bq_client = bigquery_client
     config = configuration
     formatter = response_formatter
+
+    # Ensure initialization succeeded before registering tools
+    _ensure_initialized()
 
     # Register tools with MCP - let FastMCP handle protocol translation
     mcp.tool()(handle_error(execute_query))

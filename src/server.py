@@ -31,7 +31,7 @@ try:
     logs_dir.mkdir(exist_ok=True)
     log_file = logs_dir / "bigquery_mcp.log"
 except Exception:
-    # Fallback to temp directory if we can't create logs dir
+    # Use temporary directory if logs directory creation fails
     import tempfile
 
     logs_dir = Path(tempfile.gettempdir()) / "bigquery_mcp_logs"

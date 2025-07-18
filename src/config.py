@@ -65,7 +65,7 @@ class Config:
             config_path = self._find_config_file()
 
         self.config_path = config_path
-        self._from_cli_args = False  # Indicate this instance was created from config file
+        self._from_cli_args = False  # Mark instance as created from configuration file
         self._raw_config = self._load_yaml(config_path)
         self._parse_config()
         self._apply_env_overrides()
@@ -91,7 +91,7 @@ class Config:
         instance = cls.__new__(cls)
         instance.config_path = None
         instance._raw_config = {}
-        instance._from_cli_args = True  # Indicate that this instance was created from CLI args
+        instance._from_cli_args = True  # Mark instance as created from CLI arguments
 
         # Server info
         instance.server_name = "BigQuery MCP Server"

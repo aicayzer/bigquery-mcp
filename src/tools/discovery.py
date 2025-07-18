@@ -283,10 +283,7 @@ def list_tables(dataset: str, table_type: Optional[str] = "all") -> Dict[str, An
 def register_discovery_tools(
     mcp_server, error_handler, bigquery_client, configuration, response_formatter
 ):
-    """Register discovery tools with the MCP server.
-
-    This function is called by server.py to inject dependencies and register tools.
-    """
+    """Register discovery tools with the MCP server."""
     global mcp, handle_error, bq_client, config, formatter
 
     mcp = mcp_server
@@ -294,6 +291,9 @@ def register_discovery_tools(
     bq_client = bigquery_client
     config = configuration
     formatter = response_formatter
+
+    # Ensure initialization succeeded before registering tools
+    _ensure_initialized()
 
     # Register tools with MCP - let FastMCP handle protocol translation
     mcp.tool()(handle_error(list_projects))

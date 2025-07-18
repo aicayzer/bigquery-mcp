@@ -5,6 +5,15 @@ All notable changes to the BigQuery MCP Server project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2025-07-18
+
+### Fixed
+- Race condition in tool registration causing intermittent "No server found with tool" errors
+- Improved initialization validation to prevent global variable timing issues
+
+### Changed
+- Cleaned up informal comments throughout codebase for better code quality
+
 ## [1.1.1] - 2025-07-17
 
 ### Added

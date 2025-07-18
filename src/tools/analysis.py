@@ -246,7 +246,7 @@ def analyze_table(table: str) -> Dict[str, Any]:
 
             null_ratio = null_count / actual_sample_size if actual_sample_size > 0 else 0
 
-            # Classify column (classification available for future use)
+            # Classify column
             _classify_column(
                 field.name,
                 field.field_type,
@@ -774,10 +774,7 @@ def analyze_columns(
 def register_analysis_tools(
     mcp_server, error_handler, bigquery_client, configuration, response_formatter
 ):
-    """Register analysis tools with the MCP server.
-
-    This function is called by server.py to inject dependencies and register tools.
-    """
+    """Register analysis tools with the MCP server."""
     global mcp, handle_error, bq_client, config, formatter
 
     mcp = mcp_server
@@ -785,6 +782,9 @@ def register_analysis_tools(
     bq_client = bigquery_client
     config = configuration
     formatter = response_formatter
+
+    # Ensure initialization succeeded before registering tools
+    _ensure_initialized()
 
     # Register tools with MCP - let FastMCP handle protocol translation
     mcp.tool()(handle_error(analyze_table))

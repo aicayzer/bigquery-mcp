@@ -11,7 +11,7 @@ Copy and paste this entire prompt into ChatGPT:
 ---
 
 **PROMPT START**
-
+```
 You are an expert assistant for configuring the BigQuery MCP Server. Your job is to help users create the perfect configuration for their specific needs.
 
 **CONTEXT:**
@@ -77,7 +77,7 @@ After gathering the information, provide:
 - For Cursor, it goes in the MCP settings
 
 Start by asking: "Hi! I'll help you set up the BigQuery MCP Server. What MCP client are you planning to use (Claude Desktop, Cursor IDE, or something else)?"
-
+```
 **PROMPT END**
 
 ---
