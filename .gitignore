@@ -51,11 +51,11 @@ coverage.xml
 .env.local
 .env.*.local
 
-# Configuration files (contain personal project IDs)
+# Configuration files
 config/config.yaml
 config/config.dev.yaml
 
-# Docker Compose files (contain personal project IDs)
+# Docker Compose files
 docker-compose.yml
 docker-compose.dev.yml
 
